@@ -1,0 +1,6 @@
+[submodule "dependencies/SWF"]
+	path = dependencies/SWF
+	url = https://github.com/Iuliean/SFW
+[submodule "dependencies/spdlog"]
+	path = dependencies/spdlog
+	url = https://github.com/gabime/spdlog
