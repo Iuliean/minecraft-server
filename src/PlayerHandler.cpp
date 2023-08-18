@@ -1,56 +1,26 @@
 #include <bits/stdint-uintn.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
 
 #include "Connection.h"
 #include "PlayerHandler.h"
 #include "ServerConnectionHandler.h"
-#include "client/Packet.h"
-#include "spdlog/common.h"
+#include "ServerPackets.h"
+#include "LoggerManager.h"
 #include "utils.h"
+#include "Packet.h"
 
 namespace mc
 {
     PlayerHandler::PlayerHandler(iu::Connection& client)
         : m_client(client),
-        m_state(PlayerHandlerState::IDLE)
-    {
-            m_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-            m_logger = std::make_shared<spdlog::logger>("PlayerHandler", m_sink);
-            m_logger->set_level(spdlog::level::debug);
-            m_statusMessage={
-            {"version",
-                {
-                    {"name","1.20.1"},
-                    {"protocol",763}
-                }
-            },
-            {"players",
-                {
-                    {"max", 10},
-                    {"online", 0},
-                    {"sample",
-                        {
-                            {"name", "thinkofdeath"},
-                            {"id", "4566e69f-c907-48ee-8d71-d7ba5aa00d20"}
-                        }
-                    }
-                }
-            },
-            {"description",
-                {
-                    {"text", "This is a shit implementation of an Mc server that doesn't even work"}
-                }
-            },
-            {"enforceSecureChat", true},
-            {"previewsChat", true}
-        };
- 
+        m_state(PlayerHandlerState::IDLE),
+        m_logger(iu::LoggerManager::GetLogger("PlayerHandler"))
+    { 
     }
 
     void PlayerHandler::Execute(const std::vector<uint8_t>& packets)
     {
         auto packetsIter = packets.begin();
-        mc::client::Packet::PacketPtr packet;
+        Packet::PacketPtr packet;
         while(true)
         {
             switch(m_state)
@@ -80,59 +50,55 @@ namespace mc
                     OnPlay(std::move(packet));
                     break;
                 default:
-                    m_logger->warn("State is unknown");
+                    m_logger.warn("State is unknown");
                     return;
             }
         }
     }
 
-    void PlayerHandler::OnIdle(client::Packet::PacketPtr&& genericPacket)
+    void PlayerHandler::OnIdle(Packet::PacketPtr&& genericPacket)
     {
-        switch((client::IdlePacketID)genericPacket->GetId())
+        switch(genericPacket->GetId<client::IdlePacketID>())
         {
             case client::IdlePacketID::HANDSHAKE:
             {
                 mc::client::HandshakePacket* packet = (mc::client::HandshakePacket*)genericPacket.get();  
-                m_logger->debug("{}", *packet);
+                m_logger.debug("{}", *packet);
                 switch (packet->GetNextState())
                 {
                     case 2:
-                        m_logger->info("Login request");
+                        m_logger.info("Login request");
                         m_state = PlayerHandlerState::LOGIN;
                         break;
                     case 1:
-                        m_logger->info("Status request");
+                        m_logger.info("Status request");
                         m_state = PlayerHandlerState::STATUS;
                         break;
                     default:
-                        m_logger->warn("Unknown next state {}", packet->GetNextState());
+                        m_logger.warn("Unknown next state {}", packet->GetNextState());
                         break;    
                 }
                 break;
             }
             default:
-                m_logger->warn("Unknown packet ID: {}", genericPacket->GetId());
+                m_logger.warn("Unknown packet ID: {}", genericPacket->GetId<int>());
                 break;
         }
     }
 
-    void PlayerHandler::OnStatus(client::Packet::PacketPtr&& genericPacket)
+    void PlayerHandler::OnStatus(Packet::PacketPtr&& genericPacket)
     {
-        switch ((client::StatusPacketID) genericPacket->GetId()) {
+        switch (genericPacket->GetId<client::StatusPacketID>()) {
             case client::StatusPacketID::STATUS:
             {
-                std::vector<uint8_t> send;
-                util::writeVarInt(send, 0);
-                util::writeStringToBuff(send, m_statusMessage.dump());
-                util::writeVarInt(send, 0, send.size());
-                m_client.SendAll(send);
-                m_logger->debug("Status request");
+                m_client.Send(m_statusMessage);
+                m_logger.debug("Status request sent");
                 break;
             }
             case client::StatusPacketID::PING:
             {
                 client::PingRequest* packet = (client::PingRequest*)genericPacket.get();
-                m_logger->debug("Ping request: {}", *packet);
+                m_logger.debug("Ping request: {}", *packet);
                 std::vector<uint8_t> send;
                 util::writeVarInt(send, 1);
                 send.resize(9);
@@ -142,28 +108,31 @@ namespace mc
                 break;
             }
             default:
-                m_logger->warn("Unknown packet ID: {}", genericPacket->GetId());
+                m_logger.warn("Unknown packet ID: {}", genericPacket->GetId<int>());
                 break;
         }
     }
 
-    void PlayerHandler::OnLogin(client::Packet::PacketPtr&& genericPacket)
+    void PlayerHandler::OnLogin(Packet::PacketPtr&& genericPacket)
     {
-        switch ((client::LoginPacketID) genericPacket->GetId()) {
+        switch (genericPacket->GetId<client::LoginPacketID>()) {
             case client::LoginPacketID::START:
             {
                 client::LoginStartPacket* packet = (client::LoginStartPacket*) genericPacket.get();
-                m_logger->debug("{}", *packet);
+                m_logger.debug("{}", *packet);
+                server::LoginSuccessPacket out(*packet);
+                m_client.Send(out);
+                m_state = PlayerHandlerState::PLAY;
                 break;
             }
             default:
-                m_logger->warn("Unknown packet ID: {}", genericPacket->GetId());
+                m_logger.warn("Unknown packet ID: {}", genericPacket->GetId<int>());
                 break;
         }
     }
 
-    void PlayerHandler::OnPlay(client::Packet::PacketPtr&& packet)
+    void PlayerHandler::OnPlay(Packet::PacketPtr&& packet)
     {
-        m_logger->debug("OnPlay");
+        m_logger.debug("OnPlay");
     }
 }

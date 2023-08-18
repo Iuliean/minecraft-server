@@ -1,15 +1,16 @@
 #include <Server.h>
 #include <iostream>
 
-#include "utils.h"
+#include "Logger.h"
+#include "LoggerManager.h"
 #include "MinecraftHandler.h"
-#include "spdlog/common.h"
-
 int main()
 {
-    iu::AggregateServer<mc::MinecraftHanlder> server("0.0.0.0", 25565);
-    server.SetLogLevel(spdlog::level::debug);
 
+    iu::LoggerManager::Init();
+    iu::LoggerManager::SetLevel(iu::LogLevel::DEBUG);
+
+    iu::AggregateServer<mc::MinecraftHanlder> server("0.0.0.0", 25565);
     std::thread serverThread([&server](){
         server.Run();
     });

@@ -2,16 +2,15 @@ SRC= \
 	main.cpp \
 	utils.cpp \
 	MinecraftHandler.cpp \
-	PlayerHandler.cpp
+	PlayerHandler.cpp \
+	ServerPackets.cpp 
 
 OBJECT=$(addprefix $(INTERMEDIATES), $(SRC:.cpp=.o))
 
-.PHONY: all client 
+.PHONY: all 
 
-all: client $(OBJECT)
+all:$(OBJECT)
 
 $(INTERMEDIATES)%.o:%.cpp
 	$(CXX) -c -o $@ $< $(INCLUDE) $(CFLAGS)
 
-client:
-	$(MAKE) -C client

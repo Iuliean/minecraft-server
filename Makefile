@@ -7,7 +7,8 @@ DEPENDENCIES=$(WORKDIR)/dependencies
 INCLUDE=-I$(WORKDIR)/include/ \
 		-I$(DEPENDENCIES)/SFW/include \
 		-I$(DEPENDENCIES)/nlohmann-json/single_include \
-		-I$(DEPENDENCIES)/spdlog/include \
+		-I$(DEPENDENCIES)/SFW/dependencies/spdlog/include
+
 
 INTERMEDIATES= $(WORKDIR)/intermediate/
 OUTPUT = $(WORKDIR)/build/

@@ -3,11 +3,12 @@
 #include <memory>
 #include <spdlog/spdlog.h>
 #include <nlohmann/json.hpp>
+#include <Connection.h>
 
-#include "Connection.h"
-#include "client/Packet.h"
-#include "spdlog/sinks/stdout_color_sinks.h"
-#include "utils.h"
+#include "Logger.h"
+#include "Packet.h"
+#include "ClientPackets.h"
+#include "ServerPackets.h"
 
 namespace mc
 {
@@ -27,13 +28,13 @@ namespace mc
 
         void Execute(const std::vector<uint8_t>& data);
         
-        void OnIdle(client::Packet::PacketPtr&& genericPacket);
-        void OnStatus(client::Packet::PacketPtr&& genericPacket);
-        void OnLogin(client::Packet::PacketPtr&& genericPacket);
-        void OnPlay(client::Packet::PacketPtr&& genericPacket);
+        void OnIdle(Packet::PacketPtr&& genericPacket);
+        void OnStatus(Packet::PacketPtr&& genericPacket);
+        void OnLogin(Packet::PacketPtr&& genericPacket);
+        void OnPlay(Packet::PacketPtr&& genericPacket);
 
     private:
-        mc::client::Packet::PacketPtr NextPacketIdle(auto&& dataIter)
+        Packet::PacketPtr NextPacketIdle(auto&& dataIter)
         {
             static_assert(util::IteratorU8<std::remove_reference_t<decltype(dataIter)>>);
             using namespace mc::client;
@@ -49,12 +50,12 @@ namespace mc
                     return std::make_unique<HandshakePacket>(dataIter);
                 default:
                     //maybe needs to throw
-                    m_logger->warn("Invalid idle packetID: {}", packetID);
+                    m_logger.warn("Invalid idle packetID: {}", packetID);
                     return nullptr;
             }
         }    
 
-        mc::client::Packet::PacketPtr NextPacketStatus(auto&& dataIter)
+        Packet::PacketPtr NextPacketStatus(auto&& dataIter)
         {
             static_assert(util::IteratorU8<std::remove_reference_t<decltype(dataIter)>>);
             using namespace mc::client;
@@ -73,12 +74,12 @@ namespace mc
                     return std::make_unique<PingRequest>(dataIter);
                 default:
                     //maybe needs to throw
-                    m_logger->warn("Invalid status packetID: {}", packetID);
+                    m_logger.warn("Invalid status packetID: {}", packetID);
                     return nullptr; 
             }
         }
 
-        mc::client::Packet::PacketPtr NextPacketLogin(auto&& dataIter)
+        Packet::PacketPtr NextPacketLogin(auto&& dataIter)
         {
             static_assert(util::IteratorU8<std::remove_reference_t<decltype(dataIter)>>);
             using namespace mc::client;
@@ -96,21 +97,21 @@ namespace mc
                     return std::make_unique<LoginStartPacket>(dataIter);
                 default:
                     //maybe needs to throw
-                    m_logger->warn("Invalid status packetID: {}", packetID);
+                    m_logger.warn("Invalid status packetID: {}", packetID);
                     return nullptr; 
             }
         }
 
-        mc::client::Packet::PacketPtr NextPacketPlay(auto&& dataIter)
+        Packet::PacketPtr NextPacketPlay(auto&& dataIter)
         {
             static_assert(util::IteratorU8<std::remove_reference_t<decltype(dataIter)>>);
+            return nullptr;
         }
         
         iu::Connection& m_client;
         PlayerHandlerState m_state;
-        std::shared_ptr<spdlog::sinks::stdout_color_sink_mt> m_sink;
-        std::shared_ptr<spdlog::logger> m_logger;
-        nlohmann::json m_statusMessage;
+        iu::Logger m_logger;
+        server::StatusPacket m_statusMessage;
     };
 }
 #endif //PLAYER_HANDLER_H

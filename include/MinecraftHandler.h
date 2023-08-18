@@ -1,7 +1,9 @@
 #ifndef MINECRAFT_HANDLER_H
 #define MINECRAFT_HANDLER_H
+#include <LoggerManager.h>
 #include <ServerConnectionHandler.h>
 #include <Connection.h>
+#include <atomic>
 #include <memory>
 
 namespace mc
@@ -17,7 +19,8 @@ namespace mc
         void Stop()override;
         
     private:
-        std::shared_ptr<spdlog::logger> m_logger;
+        iu::Logger m_logger;
+        std::atomic_bool m_stop;
     };
 }
 

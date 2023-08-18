@@ -1,6 +1,8 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include "nlohmann/json.hpp"
+#include "spdlog/spdlog.h"
 #include <bits/iterator_concepts.h>
 #include <bits/stdint-uintn.h>
 #include <ios>
@@ -12,8 +14,26 @@
 #include <sstream>
 #include <iomanip>
 #include <vector>
+#include <iostream>
+#include <Serializer.h>
+
 namespace mc
 {
+
+    namespace server
+    {
+        enum class IdlePacketID;
+        enum class StatusPacketID;
+        enum class LoginPacketID;
+    }
+
+    namespace client
+    {
+        enum class IdlePacketID;
+        enum class StatusPacketID;
+        enum class LoginPacketID; 
+    }
+
     namespace util
     {
         constexpr inline uint8_t SEGMENT_BIT    = 0x7F;
@@ -21,12 +41,26 @@ namespace mc
 
         template<typename T>
         concept IteratorU8 = 
-          std::same_as<typename T::value_type, uint8_t> &&
-          std::input_or_output_iterator<T>;
+            std::same_as<typename T::value_type, uint8_t> &&
+            std::input_or_output_iterator<T>;
+
+
+        template<typename T>
+        concept PacketID =
+            std::same_as<T, int>                      ||
+            std::same_as<T, client::IdlePacketID>     ||
+            std::same_as<T, server::IdlePacketID>     ||
+            std::same_as<T, client::StatusPacketID>   ||
+            std::same_as<T, server::StatusPacketID>   ||
+            std::same_as<T, client::LoginPacketID>    ||
+            std::same_as<T, server::LoginPacketID>;
+
 
         class uuid
         {
         public:
+            uuid();
+
             uuid(auto&& data)
             {
                 static_assert(util::IteratorU8<std::remove_reference_t<decltype(data)>>);
@@ -34,51 +68,41 @@ namespace mc
                     m_data[i] = *data++;
             }
 
-            uint8_t* begin()
+            inline uint8_t* begin()
             {
                 return m_data;
             }
 
-            uint8_t* end()
+            inline uint8_t* end()
             {
                 return m_data + 16;
             }
 
-            const uint8_t* begin()const
+            inline const uint8_t* begin()const
             {
                 return m_data;
             }
 
-            const uint8_t* end()const
+            inline const uint8_t* end()const
             {
                 return m_data + 16;
             }
 
-            std::string AsString()const
-            {
-                std::stringstream ss;
-                ss << std::hex;
-                ss << (int)m_data[0]
-                << (int)m_data[1]
-                << (int)m_data[2]
-                << (int)m_data[3]
-                << (int)m_data[4]
-                << (int)m_data[5]
-                << (int)m_data[6]
-                << (int)m_data[7]
-                << (int)m_data[8]
-                << (int)m_data[9]
-                << (int)m_data[10]
-                << (int)m_data[11]
-                << (int)m_data[12]
-                << (int)m_data[13]
-                << (int)m_data[14]
-                << (int)m_data[15];
-                return ss.str();
-            }
+            std::string AsString()const;
+            void Serialize(std::vector<uint8_t>& buffer)const;
         private:
             uint8_t m_data[16];
         };
+
+        inline constexpr int sizeOfVarInt(const int i)
+        {
+            return (i < 127 ? 1 : (i / 127));
+        }
+
+        inline constexpr int sizeOfString(std::string_view s)
+        {
+            return sizeOfVarInt(s.size()) + s.size();
+        }
 
         int readVarInt(auto&& begin)
         {
@@ -134,6 +158,29 @@ struct fmt::formatter<mc::util::uuid> : fmt::formatter<std::string>
     auto format(const mc::util::uuid& my, format_context &ctx) const -> decltype(ctx.out())
     {
         return format_to(ctx.out(), "{}", my.AsString());
+    }
+};
+
+template<>
+struct fmt::formatter<nlohmann::json> : fmt::formatter<std::string>
+{
+    auto format(const nlohmann::json& my, format_context &ctx) const -> decltype(ctx.out())
+    {
+        return format_to(ctx.out(), "{}", my.dump());
+    }
+};
+
+//SERIALIZERS
+
+template<>
+struct iu::Serializer<mc::util::uuid>
+{
+    void Serialize(std::vector<uint8_t>& buffer, const mc::util::uuid& toSerialzie)
+    {
+        for(uint8_t it : toSerialzie)
+        {
+            buffer.push_back(it);
+        }
     }
 };
 

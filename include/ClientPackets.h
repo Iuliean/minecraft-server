@@ -1,16 +1,13 @@
-#ifndef PACKET_H
-#define PACKET_H
+#ifndef CLIENT_PACKETS_H
+#define CLIENT_PACKETS_H
 #include <bits/stdint-uintn.h>
 #include <cstddef>
 #include <cstring>
 #include <spdlog/fmt/fmt.h>
 #include <string>
 #include <string_view>
-#include <spdlog/fmt/bundled/format.h>
-#include <boost/uuid/uuid.hpp>
 
-
-#include "utils.h"
+#include "Packet.h"
 
 namespace mc
 {
@@ -33,29 +30,13 @@ namespace mc
         {
             UNKNOWN = -1,
             START   = 0
-        };
-
-        class Packet
-        {
-        public:
-            using PacketPtr = std::unique_ptr<Packet>;
-
-            Packet(int id);
-            virtual ~Packet() = default;
-
-            int GetId()const;
-            
-            virtual std::string AsString()const; 
-            virtual constexpr const char* PacketName()const;
-        private:
-            int m_id;
-        };
+        };    
 
         class HandshakePacket: public Packet
         {
         public:
             HandshakePacket(auto&& data)
-                : Packet((int)IdlePacketID::HANDSHAKE),
+                : Packet(IdlePacketID::HANDSHAKE),
                 m_protocolVersion(util::readVarInt(data)),
                 m_serverAddress(util::readString(data)),
                 m_port((*data << 8) + *(++data)),
@@ -83,7 +64,7 @@ namespace mc
         {
         public:
             StatusRequestPacket()
-                : Packet((int)StatusPacketID::STATUS)
+                : Packet(StatusPacketID::STATUS)
             {
             }
             ~StatusRequestPacket() = default;
@@ -96,7 +77,7 @@ namespace mc
         {
         public:
             PingRequest(auto&& data)
-                :Packet((int)StatusPacketID::PING),
+                :Packet(StatusPacketID::PING),
                 m_payload((*data << 8) + (*++data << 8) + (*++data << 8) + (*++data << 8) + (*++data << 8) + (*++data << 8) + (*++data << 8) + (*++data << 8))
                 {
                 }
@@ -113,7 +94,7 @@ namespace mc
         {
         public:
             LoginStartPacket(auto&& data)
-                : Packet((int)LoginPacketID::START),
+                : Packet(LoginPacketID::START),
                 m_playerName(util::readString(data)),
                 m_hasUUID(*data++),
                 m_uuid(data)
@@ -133,21 +114,6 @@ namespace mc
         };
 
         // INLINES
-        inline int Packet::GetId()const
-        {
-            return m_id;
-        }
-        
-        inline std::string Packet::AsString()const
-        {
-            return "{Id: " + std::to_string(m_id) + "}";
-        } 
-
-        inline constexpr const char* Packet::PacketName()const
-        {
-            return "Packet";
-        }
-
         inline constexpr const char* HandshakePacket::PacketName()const
         {
             return "HandshakePacket";
@@ -226,13 +192,5 @@ namespace mc
     }
 }
 
-//FMT FORMATTERS
 
-template <typename T>
-struct fmt::formatter<T, std::enable_if_t<std::is_base_of<mc::client::Packet, T>::value, char>> :
-    fmt::formatter<std::string> {
-  auto format(const mc::client::Packet& a, format_context& ctx) const {
-    return fmt::formatter<std::string>::format(fmt::format("{}:{}", a.PacketName(), a.AsString()), ctx);
-  }
-};
-#endif //PACKET_H
+#endif //CLIENT_PACKETS_H
