@@ -1,3 +1,6 @@
 [submodule "dependencies/nlohmann-json"]
 	path = dependencies/nlohmann-json
 	url = https://github.com/nlohmann/json
+[submodule "dependencies/SFW"]
+	path = dependencies/SFW
+	url = https://github.com/Iuliean/SFW
