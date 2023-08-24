@@ -3,7 +3,8 @@ SRC= \
 	utils.cpp \
 	MinecraftHandler.cpp \
 	PlayerHandler.cpp \
-	ServerPackets.cpp 
+	ServerPackets.cpp \
+	nbt.cpp
 
 OBJECT=$(addprefix $(INTERMEDIATES), $(SRC:.cpp=.o))
 

@@ -21,6 +21,7 @@ namespace mc
     {
         auto packetsIter = packets.begin();
         Packet::PacketPtr packet;
+        
         while(true)
         {
             switch(m_state)
@@ -54,6 +55,7 @@ namespace mc
                     return;
             }
         }
+    
     }
 
     void PlayerHandler::OnIdle(Packet::PacketPtr&& genericPacket)
