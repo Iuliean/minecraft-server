@@ -1,5 +1,8 @@
 #ifndef CLIENT_PACKETS_H
 #define CLIENT_PACKETS_H
+#include "Packet.h"
+#include "utils.h"
+
 #include <bits/stdint-uintn.h>
 #include <cstddef>
 #include <cstring>
@@ -7,51 +10,59 @@
 #include <string>
 #include <string_view>
 
-#include "Packet.h"
-
 namespace mc
 {
     namespace client
     {
-        enum class IdlePacketID: int
+        enum class IdlePacketID : int
         {
-            UNKNOWN     = -1,
-            HANDSHAKE   = 0
+            UNKNOWN   = -1,
+            HANDSHAKE = 0
         };
 
-        enum class StatusPacketID: int
+        enum class StatusPacketID : int
         {
             UNKNOWN = -1,
             STATUS  = 0,
             PING    = 1
         };
 
-        enum class LoginPacketID: int
+        enum class LoginPacketID : int
         {
             UNKNOWN = -1,
             START   = 0
-        };    
+        };
 
-        class HandshakePacket: public Packet
+        enum class PlayPacketID : int
+        {
+            UNKNOWN           = -1,
+            LoginAcknowledged = 3
+        };
+
+        // ***************
+        // * IdlePackets *
+        // ***************
+
+        class HandshakePacket : public Packet
         {
         public:
-            HandshakePacket(auto&& data)
+            template<util::IteratorU8 Iter>
+            HandshakePacket(Iter& data)
                 : Packet(IdlePacketID::HANDSHAKE),
-                m_protocolVersion(util::readVarInt(data)),
-                m_serverAddress(util::readString(data)),
-                m_port((*data << 8) + *(++data)),
-                m_nextState(util::readVarInt(++data))
+                  m_protocolVersion(util::readVarInt(data)),
+                  m_serverAddress(util::readString(data)),
+                  m_port((*data << 8) + *(++data)),
+                  m_nextState(util::readVarInt(++data))
             {
-                static_assert(util::IteratorU8<std::remove_reference_t<decltype(data)>>);
             }
 
-            int GetProtocolVersion()const;
-            const std::string& GetAdress()const;
-            uint16_t GetPort()const;
-            int GetNextState()const;
+            int GetProtocolVersion() const;
+            const std::string& GetAdress() const;
+            uint16_t GetPort() const;
+            int GetNextState() const;
 
-            std::string AsString()const override; 
-            constexpr const char* PacketName()const override;
+            std::string AsString() const override;
+            constexpr const char* PacketName() const override;
 
         private:
             int m_protocolVersion;
@@ -60,137 +71,128 @@ namespace mc
             int m_nextState;
         };
 
-        class StatusRequestPacket: public Packet
+        // *****************
+        // * StatusPackets *
+        // *****************
+
+        class StatusRequestPacket : public Packet
         {
         public:
-            StatusRequestPacket()
-                : Packet(StatusPacketID::STATUS)
-            {
-            }
+            StatusRequestPacket() : Packet(StatusPacketID::STATUS) {}
             ~StatusRequestPacket() = default;
-            
-            std::string AsString()const override; 
-            constexpr const char* PacketName()const override;
+
+            std::string AsString() const override;
+            constexpr const char* PacketName() const override;
         };
 
-        class PingRequest: public Packet
+        class PingRequest : public Packet
         {
         public:
-            PingRequest(auto&& data)
-                :Packet(StatusPacketID::PING),
-                m_payload((*data << 8) + (*++data << 8) + (*++data << 8) + (*++data << 8) + (*++data << 8) + (*++data << 8) + (*++data << 8) + (*++data << 8))
-                {
-                }
-    
-            uint64_t GetPayload()const;
+            template<util::IteratorU8 Iter>
+            PingRequest(Iter& data)
+                : Packet(StatusPacketID::PING),
+                  m_payload((*data << 8) + (*++data << 8) + (*++data << 8) + (*++data << 8) +
+                            (*++data << 8) + (*++data << 8) + (*++data << 8) + (*++data << 8))
+            {
+            }
 
-            std::string AsString()const override; 
-            constexpr const char* PacketName()const override;
+            uint64_t GetPayload() const;
+
+            std::string AsString() const override;
+            constexpr const char* PacketName() const override;
+
         private:
             uint64_t m_payload;
         };
 
-        class LoginStartPacket: public Packet
+        // ****************
+        // * LoginPackets *
+        // ****************
+
+        class LoginStartPacket : public Packet
         {
         public:
-            LoginStartPacket(auto&& data)
+            template<util::IteratorU8 Iter>
+            LoginStartPacket(Iter& data)
                 : Packet(LoginPacketID::START),
-                m_playerName(util::readString(data)),
-                m_hasUUID(*data++),
-                m_uuid(data)
+                  m_playerName(util::readString(data)),
+                  m_hasUUID(*data++),
+                  m_uuid(data)
             {
-                static_assert(util::IteratorU8<std::remove_reference_t<decltype(data)>>); 
             }
 
             const std::string& GetPlayerName() const;
-            util::uuid GetUUID()const;
+            util::uuid GetUUID() const;
 
-            std::string AsString()const override; 
-            constexpr const char* PacketName()const override;
+            std::string AsString() const override;
+            constexpr const char* PacketName() const override;
+
         private:
             std::string m_playerName;
             bool m_hasUUID;
             util::uuid m_uuid;
         };
 
+        // ****************
+        // * PlayPackets *
+        // ****************
+
         // INLINES
-        inline constexpr const char* HandshakePacket::PacketName()const
+        inline constexpr const char* HandshakePacket::PacketName() const
         {
             return "HandshakePacket";
         }
 
-        inline std::string HandshakePacket::AsString()const
+        inline std::string HandshakePacket::AsString() const
         {
-            return fmt::format("{{protocol: {},serverAddress: {},port : {},nextState: {}}}", 
-                    m_protocolVersion, m_serverAddress, m_port, m_nextState);
+            return fmt::format("{{protocol: {},serverAddress: {},port : {},nextState: {}}}",
+                m_protocolVersion,
+                m_serverAddress,
+                m_port,
+                m_nextState);
         }
 
-        inline int HandshakePacket::GetProtocolVersion()const
-        {
-            return m_protocolVersion;
-        }
+        inline int HandshakePacket::GetProtocolVersion() const { return m_protocolVersion; }
 
-        inline const std::string& HandshakePacket::GetAdress()const
-        {
-            return m_serverAddress;
-        }
+        inline const std::string& HandshakePacket::GetAdress() const { return m_serverAddress; }
 
-        inline uint16_t HandshakePacket::GetPort()const
-        {
-            return m_port;
-        }
+        inline uint16_t HandshakePacket::GetPort() const { return m_port; }
 
-        inline int HandshakePacket::GetNextState()const
-        {
-            return m_nextState;
-        }
+        inline int HandshakePacket::GetNextState() const { return m_nextState; }
 
-        inline constexpr const char* StatusRequestPacket::PacketName()const
+        inline constexpr const char* StatusRequestPacket::PacketName() const
         {
             return "StatusRequestPacket";
         }
 
-        inline std::string PingRequest::AsString()const
+        inline std::string PingRequest::AsString() const
         {
             return fmt::format("{{ payload:{} }}", m_payload);
         }
 
-        inline constexpr const char* PingRequest::PacketName()const
+        inline constexpr const char* PingRequest::PacketName() const { return "PingRequest"; }
+
+        inline std::string StatusRequestPacket::AsString() const { return ""; }
+
+        inline uint64_t PingRequest::GetPayload() const { return m_payload; }
+
+        inline std::string LoginStartPacket::AsString() const
         {
-            return "PingRequest";
+            return fmt::format("{{playerName: {}, hasUUID: {}, uuid:{} }}",
+                m_playerName,
+                m_hasUUID,
+                m_uuid);
         }
 
-        inline std::string StatusRequestPacket::AsString()const
-        {
-            return "";
-        }
-
-        inline uint64_t PingRequest::GetPayload()const
-        {
-            return m_payload;
-        }
-
-        inline std::string LoginStartPacket::AsString()const
-        {
-            return fmt::format("{{playerName: {}, hasUUID: {}, uuid:{} }}", m_playerName, m_hasUUID, m_uuid);
-        }
-        inline constexpr const char* LoginStartPacket::PacketName()const
+        inline constexpr const char* LoginStartPacket::PacketName() const
         {
             return "LoginStartPacket";
         }
 
-        inline const std::string& LoginStartPacket::GetPlayerName()const
-        {
-            return m_playerName;
-        }
+        inline const std::string& LoginStartPacket::GetPlayerName() const { return m_playerName; }
 
-        inline util::uuid LoginStartPacket::GetUUID()const
-        {
-            return m_uuid;
-        }
+        inline util::uuid LoginStartPacket::GetUUID() const { return m_uuid; }
+    } // namespace client
+} // namespace mc
 
-    }
-}
-
-
-#endif //CLIENT_PACKETS_H
+#endif // CLIENT_PACKETS_H

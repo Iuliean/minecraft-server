@@ -10,7 +10,8 @@ namespace mc
         LoginSuccessPacket::LoginSuccessPacket(const client::LoginStartPacket& packet)
             : Packet(LoginPacketID::SUCCESS),
             m_uuid(packet.GetUUID()),
-            m_name(packet.GetPlayerName())
+            m_name(packet.GetPlayerName()),
+            m_numOfElements(0)
         {
         }
 

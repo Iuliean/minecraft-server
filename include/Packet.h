@@ -10,43 +10,43 @@
 namespace mc
 {
 
-     class Packet
-        {
-        public:
-            using PacketPtr = std::unique_ptr<Packet>;
-
-            template<util::PacketID T>
-            Packet(T id)
-                :m_id((int)(id))
-            {
-            }
-
-            virtual ~Packet() = default;
-
-            template<util::PacketID T>
-            typename std::remove_const<T>::type GetId()const;
-            
-            virtual std::string AsString()const; 
-            virtual constexpr const char* PacketName()const;
-        protected:
-            int m_id;
-        };
+    class Packet
+    {
+    public:
+        using PacketPtr = std::unique_ptr<Packet>;
 
         template<util::PacketID T>
-        inline typename std::remove_const<T>::type Packet::GetId()const
+        Packet(T id)
+            :m_id((int)(id))
         {
-            return (typename std::remove_const<T>::type)m_id;
         }
-        
-        inline std::string Packet::AsString()const
-        {
-            return "{Id: " + std::to_string(m_id) + "}";
-        } 
 
-        inline constexpr const char* Packet::PacketName()const
-        {
-            return "Packet";
-        }
+        virtual ~Packet() = default;
+
+        template<util::PacketID T>
+        typename std::remove_const<T>::type GetId()const;
+            
+        virtual std::string AsString()const; 
+        virtual constexpr const char* PacketName()const;
+    protected:
+        int m_id;
+    };
+
+    template<util::PacketID T>
+    inline typename std::remove_const<T>::type Packet::GetId()const
+    {
+        return (typename std::remove_const<T>::type)m_id;
+    }
+        
+    inline std::string Packet::AsString()const
+    {
+        return "{Id: " + std::to_string(m_id) + "}";
+    } 
+
+    inline constexpr const char* Packet::PacketName()const
+    {
+        return "Packet";
+    }
 
 }
 

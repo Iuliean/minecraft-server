@@ -5,6 +5,7 @@ WORKDIR=$(shell pwd)
 DEPENDENCIES=$(WORKDIR)/dependencies
 
 INCLUDE=-I$(WORKDIR)/include/ \
+		-I$(WORKDIR)/include/DataTypes \
 		-I$(DEPENDENCIES)/SFW/include \
 		-I$(DEPENDENCIES)/nlohmann-json/single_include \
 		-I$(DEPENDENCIES)/SFW/dependencies/spdlog/include

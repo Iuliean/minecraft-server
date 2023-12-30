@@ -1,5 +1,6 @@
 #include <bits/stdint-uintn.h>
 
+#include "ClientPackets.h"
 #include "Connection.h"
 #include "PlayerHandler.h"
 #include "ServerConnectionHandler.h"
@@ -136,5 +137,9 @@ namespace mc
     void PlayerHandler::OnPlay(Packet::PacketPtr&& packet)
     {
         m_logger.debug("OnPlay");
+    }
+
+    void PlayerHandler::PlayLoop()
+    {
     }
 }

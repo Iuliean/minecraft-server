@@ -1,5 +1,5 @@
+#include <cctype>
 #include "utils.h"
-
 namespace mc
 {
     namespace util
@@ -77,6 +77,11 @@ namespace mc
                 buffer.push_back(c);
             }
         }
-    
+
+        void toLower(std::string& s)
+        {
+            for(auto& c : s)
+                c = std::tolower(c);
+        }
     }
 }

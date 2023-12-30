@@ -4,14 +4,15 @@ SRC= \
 	MinecraftHandler.cpp \
 	PlayerHandler.cpp \
 	ServerPackets.cpp \
-	nbt.cpp
+	DataTypes/nbt.cpp \
+	DataTypes/Identifier.cpp \
 
-OBJECT=$(addprefix $(INTERMEDIATES), $(SRC:.cpp=.o))
+OBJECT=$(SRC:.cpp=.o)
 
 .PHONY: all 
 
 all:$(OBJECT)
 
-$(INTERMEDIATES)%.o:%.cpp
-	$(CXX) -c -o $@ $< $(INCLUDE) $(CFLAGS)
+%.o:%.cpp
+	$(CXX) -c -o $(INTERMEDIATES)$(notdir $@) $< $(INCLUDE) $(CFLAGS)
 

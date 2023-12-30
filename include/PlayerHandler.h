@@ -9,6 +9,7 @@
 #include "Packet.h"
 #include "ClientPackets.h"
 #include "ServerPackets.h"
+#include "utils.h"
 
 namespace mc
 {
@@ -33,10 +34,12 @@ namespace mc
         void OnLogin(Packet::PacketPtr&& genericPacket);
         void OnPlay(Packet::PacketPtr&& genericPacket);
 
+        void PlayLoop();
+
     private:
-        Packet::PacketPtr NextPacketIdle(auto&& dataIter)
+        template<util::IteratorU8 Iter>
+        Packet::PacketPtr NextPacketIdle(Iter& dataIter)
         {
-            static_assert(util::IteratorU8<std::remove_reference_t<decltype(dataIter)>>);
             using namespace mc::client;
             int packetSize = util::readVarInt(dataIter);
             int packetID;
@@ -45,7 +48,7 @@ namespace mc
                 return nullptr;
             packetID = util::readVarInt(dataIter);
 
-            switch ((IdlePacketID)packetID) {
+            switch (static_cast<IdlePacketID>(packetID)) {
                 case IdlePacketID::HANDSHAKE:
                     return std::make_unique<HandshakePacket>(dataIter);
                 default:
@@ -55,9 +58,9 @@ namespace mc
             }
         }    
 
-        Packet::PacketPtr NextPacketStatus(auto&& dataIter)
+        template<util::IteratorU8 Iter>
+        Packet::PacketPtr NextPacketStatus(Iter& dataIter)
         {
-            static_assert(util::IteratorU8<std::remove_reference_t<decltype(dataIter)>>);
             using namespace mc::client;
             int packetSize = util::readVarInt(dataIter);
             int packetID;
@@ -67,7 +70,7 @@ namespace mc
 
             packetID = util::readVarInt(dataIter);
 
-            switch ((StatusPacketID)packetID) {
+            switch (static_cast<StatusPacketID>(packetID)) {
                 case StatusPacketID::STATUS:
                     return std::make_unique<StatusRequestPacket>();
                 case StatusPacketID::PING:
@@ -79,9 +82,9 @@ namespace mc
             }
         }
 
-        Packet::PacketPtr NextPacketLogin(auto&& dataIter)
+        template<util::IteratorU8 Iter>
+        Packet::PacketPtr NextPacketLogin(Iter& dataIter)
         {
-            static_assert(util::IteratorU8<std::remove_reference_t<decltype(dataIter)>>);
             using namespace mc::client;
             int packetSize = util::readVarInt(dataIter);
             int packetID;
@@ -91,7 +94,7 @@ namespace mc
 
             packetID = util::readVarInt(dataIter);
 
-            switch((LoginPacketID)packetID)
+            switch(static_cast<LoginPacketID>(packetID))
             {
                 case LoginPacketID::START:
                     return std::make_unique<LoginStartPacket>(dataIter);
@@ -102,10 +105,25 @@ namespace mc
             }
         }
 
-        Packet::PacketPtr NextPacketPlay(auto&& dataIter)
+        template<util::IteratorU8 Iter>
+        Packet::PacketPtr NextPacketPlay(Iter& dataIter)
         {
-            static_assert(util::IteratorU8<std::remove_reference_t<decltype(dataIter)>>);
-            return nullptr;
+            using namespace mc::client;
+            int packetSize = util::readVarInt(dataIter);
+            int packetID;
+
+            if(packetSize == 0)
+                return nullptr;
+
+            switch(static_cast<PlayPacketID>(packetID))
+            {
+                case PlayPacketID::LoginAcknowledged:
+                    m_logger.error("LoginAck");
+                    break;
+                default:
+                    m_logger.warn("Invalid play packetID: {}", packetID);
+                    return nullptr;
+            }
         }
         
         iu::Connection& m_client;
