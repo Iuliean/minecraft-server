@@ -3,7 +3,6 @@
 #include "ClientPackets.h"
 #include "Connection.h"
 #include "PlayerHandler.h"
-#include "ServerConnectionHandler.h"
 #include "ServerPackets.h"
 #include "LoggerManager.h"
 #include "utils.h"

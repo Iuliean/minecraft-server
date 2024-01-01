@@ -1,15 +1,12 @@
 #ifndef NBT_H
 #define NBT_H
-#include "Serializer.h"
-#include "Server.h"
-#include "utils.h"
 
 #include <bits/stdint-uintn.h>
+#include <utils.h>
 #include <cstdint>
 #include <map>
 #include <memory>
 #include <string>
-#include <type_traits>
 #include <utility>
 #include <spdlog/fmt/ranges.h>
 #include <vector>

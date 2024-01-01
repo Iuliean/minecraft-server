@@ -1,9 +1,6 @@
-#include <array>
 #include <bits/stdint-uintn.h>
-#include <iterator>
 #include <Connection.h>
 #include <sys/types.h>
-#include <utility>
 
 
 #include "LoggerManager.h"

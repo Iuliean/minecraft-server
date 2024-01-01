@@ -1,6 +1,7 @@
+#include "ServerPackets.h"
+
 #include "ClientPackets.h"
 #include "Packet.h"
-#include "ServerPackets.h"
 #include "utils.h"
 
 namespace mc::server

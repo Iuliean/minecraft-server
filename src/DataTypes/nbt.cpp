@@ -1,5 +1,4 @@
 #include "DataTypes/nbt.h"
-#include <functional>
 namespace mc
 {
     namespace NBT

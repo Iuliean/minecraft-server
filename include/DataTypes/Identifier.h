@@ -1,9 +1,7 @@
 #ifndef IDENTIFIER_H
 #define IDENTIFIER_H
-#include <stdexcept>
 #include <string>
 #include <regex>
-#include <cctype>
 
 #include "utils.h"
 

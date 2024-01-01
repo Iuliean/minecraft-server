@@ -4,8 +4,8 @@
 #include <spdlog/fmt/fmt.h>
 #include <memory>
 #include <type_traits>
-
 #include "utils.h"
+
 
 namespace mc
 {

@@ -3,7 +3,6 @@
 
 #include "ClientPackets.h"
 #include "DataTypes/Identifier.h"
-#include "LoggerManager.h"
 #include "Packet.h"
 #include "Position.h"
 #include "Serializer.h"
@@ -12,7 +11,6 @@
 
 #include <cstdint>
 #include <string>
-#include <format>
 namespace mc::server
 {
 

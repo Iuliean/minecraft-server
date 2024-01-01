@@ -1,14 +1,9 @@
 #include <Server.h>
-#include <cstdint>
-#include <iostream>
 #include <Position.h>
 #include "Logger.h"
 #include "LoggerManager.h"
-#include "MinecraftHandler.h"
 #include "DataTypes/nbt.h"
 
-#include "spdlog/fmt/bundled/core.h"
-#include "spdlog/fmt/ranges.h"
 
 int main()
 {

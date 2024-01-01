@@ -4,7 +4,6 @@
 #include <ServerConnectionHandler.h>
 #include <Connection.h>
 #include <atomic>
-#include <memory>
 
 namespace mc
 {
