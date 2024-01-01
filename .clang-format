@@ -1,0 +1,72 @@
+Language: Cpp
+
+IndentWidth: 4
+IndentCaseBlocks: false
+ColumnLimit: 100
+IndentCaseLabels: true
+IndentPPDirectives: BeforeHash
+NamespaceIndentation: All
+UseTab: Never
+
+AccessModifierOffset: -4
+AlignAfterOpenBracket: false
+AlignConsecutiveAssignments: true
+AlignOperands: Align
+AllowAllArgumentsOnNextLine: false
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+AllowAllConstructorInitializersOnNextLine: false
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: true
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: All
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLambdasOnASingleLine: All
+AllowShortLoopsOnASingleLine: false
+AlwaysBreakAfterReturnType: None
+PenaltyReturnTypeOnItsOwnLine: 3311231231
+AlwaysBreakTemplateDeclarations: Yes
+BinPackArguments: false
+BinPackParameters: false
+
+BreakBeforeBraces: Custom
+BraceWrapping:
+    AfterCaseLabel: true
+    AfterClass: true
+    AfterControlStatement: Always
+    AfterEnum: true
+    AfterFunction: true
+    AfterNamespace: true
+    AfterStruct: true
+    AfterUnion: true
+    AfterExternBlock: true
+    BeforeCatch: true
+    BeforeElse: true
+    BeforeLambdaBody: true
+
+BreakAfterJavaFieldAnnotations: true
+BreakConstructorInitializers: BeforeColon
+BreakInheritanceList: BeforeColon
+CompactNamespaces: false
+
+PointerAlignment: Left
+DerivePointerAlignment: true
+
+Cpp11BracedListStyle: false
+FixNamespaceComments: true
+IncludeBlocks: Regroup
+SpaceAfterCStyleCast: false
+SpaceAfterLogicalNot: false
+SpaceAfterTemplateKeyword: false
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeInheritanceColon: true
+SpaceBeforeParens: Never
+SpaceBeforeRangeBasedForLoopColon: true
+SpaceBeforeSquareBrackets: false
+SpaceInEmptyBlock: false
+SpaceInEmptyParentheses: false
+SpacesInAngles: false
+SpacesInCStyleCastParentheses: false
+SpacesInConditionalStatement: false
+SpacesInContainerLiterals: true
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
