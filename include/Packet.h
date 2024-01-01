@@ -27,7 +27,7 @@ namespace mc
         typename std::remove_const<T>::type GetId()const;
             
         virtual std::string AsString()const; 
-        virtual constexpr const char* PacketName()const;
+        virtual constexpr std::string PacketName()const;
     protected:
         int m_id;
     };
@@ -43,7 +43,7 @@ namespace mc
         return "{Id: " + std::to_string(m_id) + "}";
     } 
 
-    inline constexpr const char* Packet::PacketName()const
+    inline constexpr std::string Packet::PacketName()const
     {
         return "Packet";
     }

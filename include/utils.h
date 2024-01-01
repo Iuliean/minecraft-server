@@ -1,6 +1,8 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include "Logger.h"
+#include "LoggerManager.h"
 #include "nlohmann/json.hpp"
 #include "spdlog/spdlog.h"
 
@@ -94,7 +96,8 @@ namespace mc
             uint8_t position = 0;
 
             while(true)
-            {
+            {  
+                iu::LoggerManager::GlobalLogger().info("{}", *begin);
                 value |= (*begin & SEGMENT_BIT) << position;
 
                 if((*begin & CONTINUE_BIT) == 0)
@@ -136,13 +139,30 @@ namespace mc
 } // namespace mc
 
 // FMT FORMATTERS
-
+/*
+template<typename T> requires (std::ranges::range<T> && !std::same_as<T, std::string> && !std::same_as<T, fmt::v9::basic_string_view<char>>)
+struct fmt::formatter<T> : fmt::formatter<std::string> 
+{
+    auto format(const T& my, format_context& ctx) const -> decltype(ctx.out())
+    {
+        std::string out = "{";
+        for(const auto& value : my)
+        {
+            out.append(fmt::format("{}", value)).append(", ");
+        }
+        out.pop_back();
+        out.pop_back();
+        out.append("}");
+        return fmt::format_to(ctx.out(), "{}", out);
+    }
+};
+*/
 template<>
 struct fmt::formatter<mc::util::uuid> : fmt::formatter<std::string>
 {
     auto format(const mc::util::uuid& my, format_context& ctx) const -> decltype(ctx.out())
     {
-        return format_to(ctx.out(), "{}", my.AsString());
+        return fmt::format_to(ctx.out(), "{}", my.AsString());
     }
 };
 
@@ -151,7 +171,7 @@ struct fmt::formatter<nlohmann::json> : fmt::formatter<std::string>
 {
     auto format(const nlohmann::json& my, format_context& ctx) const -> decltype(ctx.out())
     {
-        return format_to(ctx.out(), "{}", my.dump());
+        return fmt::format_to(ctx.out(), "{}", my.dump());
     }
 };
 
@@ -163,7 +183,7 @@ struct iu::Serializer<std::vector<S>>
     void Serialize(std::vector<uint8_t>& buffer, const std::vector<S>& toSerialize)
     {
         iu::Serializer<S> serializer;
-        for (const auto& obj: toSerialize)
+        for(const auto& obj : toSerialize)
             serializer.Serialize(buffer, obj);
     }
 };
@@ -173,7 +193,7 @@ struct iu::Serializer<Integral>
 {
     void Serialize(std::vector<uint8_t>& buffer, Integral toSerialize)
     {
-        uint8_t* data = static_cast<uint8_t*>(&toSerialize);
+        uint8_t* data = static_cast<uint8_t*>(static_cast<void*>(&toSerialize));
         for(size_t i; i < sizeof(toSerialize); ++i)
             buffer.push_back(data[i]);
     }
@@ -194,8 +214,8 @@ struct iu::Serializer<mc::util::uuid>
 namespace mc::util
 {
     using BoolSerializer = iu::Serializer<bool>;
-    using IntSerializer = iu::Serializer<std::int32_t>;
+    using IntSerializer  = iu::Serializer<std::int32_t>;
     using LongSerializer = iu::Serializer<std::int64_t>;
     using ByteSerializer = iu::Serializer<std::uint8_t>;
-}
+} // namespace mc::util
 #endif // UTILS_H

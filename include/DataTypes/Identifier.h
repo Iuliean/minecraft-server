@@ -33,7 +33,7 @@ struct fmt::formatter<mc::Identifier> : fmt::formatter<std::string>
 {
     auto format(const mc::Identifier& my, format_context &ctx) const -> decltype(ctx.out())
     {
-        return format_to(ctx.out(), "{}", my.AsString());
+        return fmt::format_to(ctx.out(), "{}", my.AsString());
     }
 };
 

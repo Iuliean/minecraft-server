@@ -11,6 +11,8 @@
 #include "utils.h"
 
 #include <cstdint>
+#include <string>
+#include <format>
 namespace mc::server
 {
 
@@ -54,7 +56,7 @@ namespace mc::server
             return fmt::format("{{ name: {}, uuid: {}}}", m_name, m_uuid);
         }
 
-        inline constexpr const char* PacketName() const override { return "LoginSuccessPacket"; }
+        inline constexpr std::string PacketName() const override { return "LoginSuccessPacket"; }
 
     private:
         util::uuid m_uuid;
@@ -78,7 +80,7 @@ namespace mc::server
 
         inline std::string AsString() const override { return fmt::format("{}", m_payload); }
 
-        inline constexpr const char* PacketName() const override { return "StatusPacket"; }
+        inline constexpr std::string PacketName() const override { return "StatusPacket"; }
 
     private:
         nlohmann::json m_payload;
@@ -91,6 +93,8 @@ namespace mc::server
     class LoginPlayPacket : public Packet
     {
     public:
+        LoginPlayPacket();
+
         inline std::string AsString() const override
         {
             constexpr const char* const text = "EntityID:{}, "
@@ -126,7 +130,7 @@ namespace mc::server
                 m_portalCooldown);
         }
 
-        inline constexpr const char* PacketName() const override { return "LoginPlay"; }
+        inline constexpr std::string PacketName() const override { return "LoginPlay"; }
 
     private:
         friend iu::Serializer<mc::server::LoginPlayPacket>;
@@ -164,7 +168,6 @@ struct iu::Serializer<mc::server::LoginSuccessPacket>
         // size of uuid 16 bytes(128bits) + size of name string + count of
         // elements (atm 0) + id
         const int packetSize = 128 / 8 + sizeOfString(toSerialize.GetName()) + 2;
-        LoggerManager::GlobalLogger().info("{}", packetSize);
         Serializer<uuid> uuidSerializer;
 
         writeVarInt(buffer, packetSize);

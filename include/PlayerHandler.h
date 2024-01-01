@@ -53,7 +53,7 @@ namespace mc
                     return std::make_unique<HandshakePacket>(dataIter);
                 default:
                     //maybe needs to throw
-                    m_logger.warn("Invalid idle packetID: {}", packetID);
+                    m_logger.warn("Invalid idle packetID: {:0x}", packetID);
                     return nullptr;
             }
         }    
@@ -77,7 +77,7 @@ namespace mc
                     return std::make_unique<PingRequest>(dataIter);
                 default:
                     //maybe needs to throw
-                    m_logger.warn("Invalid status packetID: {}", packetID);
+                    m_logger.warn("Invalid status packetID: {:0x}", packetID);
                     return nullptr; 
             }
         }
@@ -100,7 +100,7 @@ namespace mc
                     return std::make_unique<LoginStartPacket>(dataIter);
                 default:
                     //maybe needs to throw
-                    m_logger.warn("Invalid status packetID: {}", packetID);
+                    m_logger.warn("Invalid status packetID: {:0x}", packetID);
                     return nullptr; 
             }
         }
@@ -115,13 +115,15 @@ namespace mc
             if(packetSize == 0)
                 return nullptr;
 
+            packetID = util::readVarInt(dataIter);
+            
             switch(static_cast<PlayPacketID>(packetID))
             {
                 case PlayPacketID::LoginAcknowledged:
-                    m_logger.error("LoginAck");
+                    return std::make_unique<LoginAckPacket>();
                     break;
                 default:
-                    m_logger.warn("Invalid play packetID: {}", packetID);
+                    m_logger.warn("Invalid play packetID: {:0x}", packetID);
                     return nullptr;
             }
         }

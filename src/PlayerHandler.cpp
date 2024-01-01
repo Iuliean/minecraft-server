@@ -134,9 +134,19 @@ namespace mc
         }
     }
 
-    void PlayerHandler::OnPlay(Packet::PacketPtr&& packet)
+    void PlayerHandler::OnPlay(Packet::PacketPtr&& genericPacket)
     {
-        m_logger.debug("OnPlay");
+        switch (genericPacket->GetId<client::PlayPacketID>())
+        {
+            case client::PlayPacketID::LoginAcknowledged:
+            {
+                m_logger.debug("Login Acknowledged");
+                break;
+            }
+            default:
+                m_logger.warn("Unknown packet ID:{}", genericPacket->GetId<int>());
+                break;
+        }
     }
 
     void PlayerHandler::PlayLoop()

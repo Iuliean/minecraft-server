@@ -36,7 +36,7 @@ namespace mc
         enum class PlayPacketID : int
         {
             UNKNOWN           = -1,
-            LoginAcknowledged = 3
+            LoginAcknowledged = 0x03
         };
 
         // ***************
@@ -62,7 +62,7 @@ namespace mc
             int GetNextState() const;
 
             std::string AsString() const override;
-            constexpr const char* PacketName() const override;
+            constexpr std::string PacketName() const override;
 
         private:
             int m_protocolVersion;
@@ -82,7 +82,7 @@ namespace mc
             ~StatusRequestPacket() = default;
 
             std::string AsString() const override;
-            constexpr const char* PacketName() const override;
+            constexpr std::string PacketName() const override;
         };
 
         class PingRequest : public Packet
@@ -99,7 +99,7 @@ namespace mc
             uint64_t GetPayload() const;
 
             std::string AsString() const override;
-            constexpr const char* PacketName() const override;
+            constexpr std::string PacketName() const override;
 
         private:
             uint64_t m_payload;
@@ -125,7 +125,7 @@ namespace mc
             util::uuid GetUUID() const;
 
             std::string AsString() const override;
-            constexpr const char* PacketName() const override;
+            constexpr std::string PacketName() const override;
 
         private:
             std::string m_playerName;
@@ -137,8 +137,14 @@ namespace mc
         // * PlayPackets *
         // ****************
 
+        class LoginAckPacket : public Packet
+        {
+        public:
+            LoginAckPacket() : Packet(PlayPacketID::LoginAcknowledged) {}
+        };
+
         // INLINES
-        inline constexpr const char* HandshakePacket::PacketName() const
+        inline constexpr std::string HandshakePacket::PacketName() const
         {
             return "HandshakePacket";
         }
@@ -160,7 +166,7 @@ namespace mc
 
         inline int HandshakePacket::GetNextState() const { return m_nextState; }
 
-        inline constexpr const char* StatusRequestPacket::PacketName() const
+        inline constexpr std::string StatusRequestPacket::PacketName() const
         {
             return "StatusRequestPacket";
         }
@@ -170,7 +176,7 @@ namespace mc
             return fmt::format("{{ payload:{} }}", m_payload);
         }
 
-        inline constexpr const char* PingRequest::PacketName() const { return "PingRequest"; }
+        inline constexpr std::string PingRequest::PacketName() const { return "PingRequest"; }
 
         inline std::string StatusRequestPacket::AsString() const { return ""; }
 
@@ -184,7 +190,7 @@ namespace mc
                 m_uuid);
         }
 
-        inline constexpr const char* LoginStartPacket::PacketName() const
+        inline constexpr std::string LoginStartPacket::PacketName() const
         {
             return "LoginStartPacket";
         }

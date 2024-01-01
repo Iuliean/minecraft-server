@@ -34,10 +34,18 @@ namespace mc
         PlayerHandler h(connection);
         std::vector<uint8_t> data;
         data.resize(PACKET_SIZE);
-
+        std::stringstream ss;
         while(!m_stop)
         {
             size_t recv = connection.Receive(data, PACKET_SIZE);
+            for(size_t i = 0; i < recv; ++i)
+            {
+                ss << std::hex << (int)data[i] << ", ";
+            }
+
+            m_logger.debug("{}",ss.str());
+            ss.clear();
+            ss.str("");
             if (recv == 0 )
                 return;
             h.Execute(data);

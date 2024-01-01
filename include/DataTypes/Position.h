@@ -95,7 +95,7 @@ struct fmt::formatter<mc::Position> : fmt::formatter<std::string>
 {
     auto format(const mc::Position& my, format_context &ctx) const -> decltype(ctx.out())
     {
-        return format_to(ctx.out(), "{}", my.AsString());
+        return fmt::format_to(ctx.out(), "{}", my.AsString());
     }
 };
 
