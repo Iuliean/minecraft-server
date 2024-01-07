@@ -1,10 +1,10 @@
+#include <SFW/Connection.h>
+#include <SFW/LoggerManager.h>
 #include <bits/stdint-uintn.h>
 
 #include "ClientPackets.h"
-#include "Connection.h"
 #include "PlayerHandler.h"
 #include "ServerPackets.h"
-#include "LoggerManager.h"
 #include "utils.h"
 #include "Packet.h"
 

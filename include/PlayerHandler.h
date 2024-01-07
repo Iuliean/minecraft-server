@@ -3,9 +3,9 @@
 #include <memory>
 #include <spdlog/spdlog.h>
 #include <nlohmann/json.hpp>
-#include <Connection.h>
+#include <SFW/Connection.h>
+#include <SFW/Logger.h>
 
-#include "Logger.h"
 #include "Packet.h"
 #include "ClientPackets.h"
 #include "ServerPackets.h"

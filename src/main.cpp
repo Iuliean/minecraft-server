@@ -1,7 +1,6 @@
-#include <Server.h>
-#include <Position.h>
-#include "Logger.h"
-#include "LoggerManager.h"
+#include <SFW/Server.h>
+#include <SFW/Logger.h>
+#include <SFW/LoggerManager.h>
 #include "DataTypes/nbt.h"
 
 
@@ -23,19 +22,38 @@ int main()
     serverThread.join();
 
 #else
-    using namespace mc::NBT;
     auto& log = iu::LoggerManager::GlobalLogger();
-    Byte v = 1;
-    NamedByte byte("Hello",v);
-    NamedInt byte2("Name", 234);
-    NamedIntArray byte3("Name", {1,2,3});
+    using namespace mc::NBT;
+    NamedCompound objects("Root");
+    NamedInt intnamed("myint", 23);
+    NamedIntArray intarr("MyArr", {1,2,3,4,5,6,7});
+    NamedList list("list");
+    list.Get().Add(UnnamedInt{23});
+    list.Get().Add(UnnamedInt{2444});
+    objects.Get().Add(intnamed);
+    objects.Get().Add(intarr);
+    objects.Get().Add(list);
 
-    log.info("Byte1: {}", byte);
-    log.info("Byte2: Value:{}", byte2);
-    log.info("{}", byte3);
+    for (const auto& [name, value] : objects.Get())
+    {
+        if (name == "myint")
+        {
+            log.info("{}", *dynamic_cast<NamedInt*>(value));
+        }
+        if(name == "MyArr")
+        {
+            log.info("{}", *dynamic_cast<NamedIntArray*>(value));
+        }
+        if(name == "list")
+        {
+            auto& l = dynamic_cast<NamedList*>(value)->Get();
+            for (auto it = l.begin(); it < l.end(); it++)
+            {
+                log.info("{}", it.get<int>());
+            }
+        }
+    }
 
-    NamedList list("MyList");
-    
 #endif
     return 0;
 }

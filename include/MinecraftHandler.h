@@ -1,8 +1,8 @@
 #ifndef MINECRAFT_HANDLER_H
 #define MINECRAFT_HANDLER_H
-#include <LoggerManager.h>
-#include <ServerConnectionHandler.h>
-#include <Connection.h>
+#include <SFW/LoggerManager.h>
+#include <SFW/ServerConnectionHandler.h>
+#include <SFW/Connection.h>
 #include <atomic>
 
 namespace mc

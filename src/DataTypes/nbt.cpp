@@ -13,10 +13,7 @@ namespace mc
 
         NBTCompoundObject::NBTCompoundObject(const NBTCompoundObject& other)
         {
-            for(auto& tag : other.m_objectsTree)
-            {
-                m_objectsTree.insert(std::make_pair(tag.first, tag.second->Clone()));
-            }
+            Copy(other);
         }
 
         NBTCompoundObject::~NBTCompoundObject()
@@ -24,6 +21,19 @@ namespace mc
             for(auto tag : m_objectsTree)
             {
                 delete tag.second;
+            }
+        }
+        NBTCompoundObject& NBTCompoundObject::operator=(const NBTCompoundObject& other)
+        {
+            Copy(other);
+            return *this;
+        }
+
+        void NBTCompoundObject::Copy(const NBTCompoundObject& other)
+        {
+            for(auto& tag : other.m_objectsTree)
+            {
+                m_objectsTree.insert(std::make_pair(tag.first, tag.second->Clone()));
             }
         }
         /* ***************************** NBTListObject ***************************** */

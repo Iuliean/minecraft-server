@@ -1,10 +1,10 @@
 #ifndef POSITION_H
 #define POSITION_H
 
-#include "utils.h"
-
+#include <SFW/utils.h>
 #include <cstdint>
 
+#include "utils.h"
 namespace mc
 {
     class Position

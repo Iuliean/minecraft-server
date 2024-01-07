@@ -1,11 +1,11 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include "Logger.h"
-#include "LoggerManager.h"
-#include "nlohmann/json.hpp"
+#include <SFW/Serializer.h>
+#include <SFW/Logger.h>
+#include <SFW/LoggerManager.h>
+#include <nlohmann/json.hpp>
 
-#include <Serializer.h>
 #include <bits/iterator_concepts.h>
 #include <bits/stdint-uintn.h>
 #include <spdlog/fmt/fmt.h>
@@ -185,7 +185,7 @@ struct iu::Serializer<Integral>
 {
     void Serialize(std::vector<uint8_t>& buffer, Integral toSerialize)
     {
-        uint8_t* data = static_cast<uint8_t*>(static_cast<void*>(&toSerialize));
+        uint8_t* data = reinterpret_cast<uint8_t*>(&toSerialize);
         for(size_t i; i < sizeof(toSerialize); ++i)
             buffer.push_back(data[i]);
     }

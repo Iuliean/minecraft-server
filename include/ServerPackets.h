@@ -5,8 +5,8 @@
 #include "DataTypes/Identifier.h"
 #include "Packet.h"
 #include "Position.h"
-#include "Serializer.h"
-#include "nlohmann/json.hpp"
+#include <SFW/Serializer.h>
+#include <nlohmann/json.hpp>
 #include "utils.h"
 
 #include <cstdint>

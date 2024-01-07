@@ -1,9 +1,9 @@
+#include <SFW/LoggerManager.h>
+#include <SFW/Connection.h>
 #include <bits/stdint-uintn.h>
-#include <Connection.h>
 #include <sys/types.h>
 
 
-#include "LoggerManager.h"
 #include "MinecraftHandler.h"
 #include "PlayerHandler.h"
 
