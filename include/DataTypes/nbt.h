@@ -10,8 +10,8 @@
 #include <memory>
 #include <string>
 #include <utility>
-#include <spdlog/fmt/ranges.h>
 #include <vector>
+#include <concepts>
 
 namespace mc::NBT
 {
@@ -240,7 +240,7 @@ namespace mc::NBT
         TagMap::const_iterator end() const { return m_objectsTree.end(); }
 
     private:
-        friend struct fmt::formatter<mc::NBT::NBTCompoundObject>; 
+        friend struct std::formatter<mc::NBT::NBTCompoundObject>; 
         void Copy(const NBTCompoundObject& other);
         TagMap m_objectsTree;
         // needs iterators
@@ -480,20 +480,26 @@ namespace mc::NBT
 
 //FMT FORMATTERS
 template<mc::NBT::CanConstructNBTTag T>
-struct fmt::formatter<mc::NBT::NBTNamedTag<T>> : fmt::formatter<std::string>
+struct std::formatter<mc::NBT::NBTNamedTag<T>> : public std::formatter<std::string>
 {
-    auto format(const mc::NBT::NBTNamedTag<T>& my, format_context& ctx) const -> decltype(ctx.out())
+    template<typename FmtContext>
+    FmtContext::iterator format(const mc::NBT::NBTNamedTag<T>& my, FmtContext& ctx) const
     {
-        return fmt::format_to(ctx.out(), "\"{}\":{{ {} }}", my.GetName(), my.Get());
+        if(std::same_as<decltype(my.Get()), std::vector<int>>)
+            return ctx.out();
+        return std::format_to(ctx.out(), "\"{}\":{{ {} }}", my.GetName(), my.Get());
     }
 };
 
 template<mc::NBT::CanConstructNBTTag T>
-struct fmt::formatter<mc::NBT::NBTUnnamedTag<T>> : fmt::formatter<std::string>
+struct std::formatter<mc::NBT::NBTUnnamedTag<T>> : public std::formatter<std::string>
 {
-    auto format(const mc::NBT::NBTUnnamedTag<T>& my, format_context& ctx) const -> decltype(ctx.out())
+    template<typename FmtContext>
+    FmtContext::iterator format(const mc::NBT::NBTUnnamedTag<T>& my, FmtContext& ctx) const
     {
-        return fmt::format_to(ctx.out(), "{}", my.Get());
+        if(std::same_as<decltype(my.Get()), std::vector<int>>)
+            return ctx.out();
+        return std::format_to(ctx.out(), "{}", my.Get());
     }
 };
 

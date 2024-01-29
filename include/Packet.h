@@ -53,10 +53,10 @@ namespace mc
 //FMT FORMATTERS
 
 template <typename T>
-struct fmt::formatter<T, std::enable_if_t<std::is_base_of<mc::Packet, T>::value, char>> :
-    fmt::formatter<std::string> {
+struct std::formatter<T, std::enable_if_t<std::is_base_of<mc::Packet, T>::value, char>> :
+    std::formatter<std::string> {
   auto format(const mc::Packet& a, format_context& ctx) const {
-    return fmt::formatter<std::string>::format(fmt::format("{}:{}", a.PacketName(), a.AsString()), ctx);
+    return std::formatter<std::string>::format(std::format("{}:{}", a.PacketName(), a.AsString()), ctx);
   }
 };
 

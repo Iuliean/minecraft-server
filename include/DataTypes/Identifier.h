@@ -27,11 +27,12 @@ namespace mc
 }
 
 template<>
-struct fmt::formatter<mc::Identifier> : fmt::formatter<std::string>
+struct std::formatter<mc::Identifier> : public std::formatter<std::string>
 {
-    auto format(const mc::Identifier& my, format_context &ctx) const -> decltype(ctx.out())
+    template<typename FmtContext>
+    FmtContext::iterator format(const mc::Identifier& my, format_context &ctx) const
     {
-        return fmt::format_to(ctx.out(), "{}", my.AsString());
+        return std::format_to(ctx.out(), "{}", my.AsString());
     }
 };
 

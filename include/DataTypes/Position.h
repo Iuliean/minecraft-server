@@ -74,7 +74,7 @@ namespace mc
 
         inline std::string AsString() const
         {
-            return fmt::format("X:{}, Z:{}, Y:{}", GetX(), GetZ(), GetY());
+            return std::format("X:{}, Z:{}, Y:{}", GetX(), GetZ(), GetY());
         } 
 
     private:
@@ -91,11 +91,12 @@ namespace mc
 
 
 template<>
-struct fmt::formatter<mc::Position> : fmt::formatter<std::string>
+struct std::formatter<mc::Position> : public std::formatter<std::string>
 {
-    auto format(const mc::Position& my, format_context &ctx) const -> decltype(ctx.out())
+    template<typename FmtContext>
+    FmtContext::iterator format(const mc::Position& my, format_context &ctx) const
     {
-        return fmt::format_to(ctx.out(), "{}", my.AsString());
+        return std::format_to(ctx.out(), "{}", my.AsString());
     }
 };
 

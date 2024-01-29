@@ -4,7 +4,7 @@
 #include "ClientPackets.h"
 #include "DataTypes/Identifier.h"
 #include "Packet.h"
-#include "Position.h"
+#include "DataTypes/Position.h"
 #include <SFW/Serializer.h>
 #include <nlohmann/json.hpp>
 #include "utils.h"
@@ -51,7 +51,7 @@ namespace mc::server
 
         inline std::string AsString() const override
         {
-            return fmt::format("{{ name: {}, uuid: {}}}", m_name, m_uuid);
+            return std::format("{{ name: {}, uuid: {}}}", m_name, m_uuid);
         }
 
         inline constexpr std::string PacketName() const override { return "LoginSuccessPacket"; }
@@ -76,7 +76,7 @@ namespace mc::server
 
         inline const nlohmann::json& Json() const { return m_payload; }
 
-        inline std::string AsString() const override { return fmt::format("{}", m_payload); }
+        inline std::string AsString() const override { return std::format("{}", m_payload); }
 
         inline constexpr std::string PacketName() const override { return "StatusPacket"; }
 
@@ -110,7 +110,7 @@ namespace mc::server
                                                "isFlat:{}, "
                                                "hasDeathLocation:{}, "
                                                "portalCooldown:{}";
-            return fmt::format(text,
+            return std::format(text,
                 m_entityID,
                 m_isHardcore,
                 m_maxPlayers,

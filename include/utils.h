@@ -10,8 +10,10 @@
 #include <bits/stdint-uintn.h>
 #include <spdlog/fmt/fmt.h>
 #include <stdexcept>
+#include <ranges>
 #include <string_view>
 #include <vector>
+#include <format>
 
 namespace mc
 {
@@ -150,22 +152,37 @@ struct fmt::formatter<T> : fmt::formatter<std::string>
 };
 */
 template<>
-struct fmt::formatter<mc::util::uuid> : fmt::formatter<std::string>
+struct std::formatter<mc::util::uuid> : public std::formatter<std::string>
 {
-    auto format(const mc::util::uuid& my, format_context& ctx) const -> decltype(ctx.out())
+    template<typename FmtContext>
+    FmtContext::iterator format(const mc::util::uuid& my, FmtContext& ctx) const
     {
-        return fmt::format_to(ctx.out(), "{}", my.AsString());
+        return std::format_to(ctx.out(), "{}", my.AsString());
     }
 };
 
 template<>
-struct fmt::formatter<nlohmann::json> : fmt::formatter<std::string>
+struct std::formatter<nlohmann::json> : public std::formatter<std::string>
 {
-    auto format(const nlohmann::json& my, format_context& ctx) const -> decltype(ctx.out())
+    template<typename FmtContext>
+    FmtContext::iterator format(const nlohmann::json& my, FmtContext& ctx) const
     {
-        return fmt::format_to(ctx.out(), "{}", my.dump());
+        return std::format_to(ctx.out(), "{}", my.dump());
     }
 };
+
+template<std::ranges::input_range T>
+struct std::formatter<T> : public std::formatter<std::string>
+{
+        template<typename FmtContext>
+    FmtContext::iterator format(const T& my, FmtContext& ctx) const
+    {
+        for (const auto& el : my)
+            std::format_to(ctx.out(), "{}, ", el);
+        return ctx.out();
+    }
+};
+
 
 // SERIALIZERS
 
