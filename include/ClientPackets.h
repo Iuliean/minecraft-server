@@ -148,7 +148,7 @@ namespace mc
 
         inline std::string HandshakePacket::AsString() const
         {
-            return fmt::format("{{protocol: {},serverAddress: {},port : {},nextState: {}}}",
+            return std::format("{{protocol: {},serverAddress: {},port : {},nextState: {}}}",
                 m_protocolVersion,
                 m_serverAddress,
                 m_port,
@@ -170,7 +170,7 @@ namespace mc
 
         inline std::string PingRequest::AsString() const
         {
-            return fmt::format("{{ payload:{} }}", m_payload);
+            return std::format("{{ payload:{} }}", m_payload);
         }
 
         inline constexpr std::string PingRequest::PacketName() const { return "PingRequest"; }
@@ -181,7 +181,7 @@ namespace mc
 
         inline std::string LoginStartPacket::AsString() const
         {
-            return fmt::format("{{playerName: {}, hasUUID: {}, uuid:{} }}",
+            return std::format("{{playerName: {}, hasUUID: {}, uuid:{} }}",
                 m_playerName,
                 m_hasUUID,
                 m_uuid);
