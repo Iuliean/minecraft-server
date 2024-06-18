@@ -28,7 +28,7 @@ namespace mc
         ~PlayerHandler() = default;
 
         void Execute(const std::vector<uint8_t>& data);
-        
+
         void OnIdle(Packet::PacketPtr&& genericPacket);
         void OnStatus(Packet::PacketPtr&& genericPacket);
         void OnLogin(Packet::PacketPtr&& genericPacket);

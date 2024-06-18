@@ -1,9 +1,10 @@
 #include <SFW/Server.h>
 #include <SFW/Logger.h>
 #include <SFW/LoggerManager.h>
+#include <cstdint>
 #include "DataTypes/nbt.h"
 
-
+#include <fstream>
 int main()
 {
     iu::LoggerManager::Init();
@@ -24,36 +25,29 @@ int main()
 #else
     auto& log = iu::LoggerManager::GlobalLogger();
     using namespace mc::NBT;
-    NamedCompound objects("Root");
-    NamedInt intnamed("myint", 23);
-    NamedIntArray intarr("MyArr", {1,2,3,4,5,6,7});
-    NamedList list("list");
-    list.Get().Add(UnnamedInt{23});
-    list.Get().Add(UnnamedInt{2444});
-    objects.Get().Add(intnamed);
-    objects.Get().Add(intarr);
-    objects.Get().Add(list);
+    NamedCompound objects("hello world");
+    objects->Insert(NamedString("name", "Bananrama"));
+    objects->Insert(NamedInt("somevalue", 123));
+    objects->Insert(NamedCompound("ested"));
+    objects->Get<NBTCompound>("ested")->Insert("hello", std::string("hhhh"));
 
-    for (const auto& [name, value] : objects.Get())
+    objects->Insert("Somelist", NBTList{})->Insert(12);
+    auto& list = objects->Get<NBTList>("Somelist");
+    list->Insert(323);
+    list->Insert(24);
+    list->Insert(14);
+    list->Insert(44);
+
+    objects->Insert(NamedString("Somestring", "am coaili mari si sunt bun rau"));
+    std::vector<uint8_t> out;
+
+    iu::Serializer<NamedCompound>().Serialize(out, objects);
+
+    std::ofstream fs("out.dat", std::ios::binary);
+    for(auto byte: out)
     {
-        if (name == "myint")
-        {
-            log.info("{}", *dynamic_cast<NamedInt*>(value));
-        }
-        if(name == "MyArr")
-        {
-            log.info("{}", *dynamic_cast<NamedIntArray*>(value));
-        }
-        if(name == "list")
-        {
-            auto& l = dynamic_cast<NamedList*>(value)->Get();
-            for (auto it = l.begin(); it < l.end(); it++)
-            {
-                log.info("{}", it.get<int>());
-            }
-        }
+        fs << byte;
     }
-
 #endif
     return 0;
 }

@@ -2,6 +2,11 @@
 #define NBT_H
 
 #include <SFW/Serializer.h>
+#include <concepts>
+#include <cstring>
+#include <iterator>
+#include <stdexcept>
+#include <sys/types.h>
 #include <utils.h>
 #include <bits/stdint-uintn.h>
 #include <unordered_map>
@@ -11,7 +16,6 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include <concepts>
 
 namespace mc::NBT
 {
@@ -52,8 +56,8 @@ namespace mc::NBT
     // only IEE 754 float values
     static_assert(std::numeric_limits<double>::is_iec559);
 
-    class NBTCompoundObject;
-    class NBTListObject;
+    class NBTCompound;
+    class NBTList;
 
     template<typename T>
     consteval inline TagType getTagType()
@@ -78,9 +82,9 @@ namespace mc::NBT
             return TagType::INT_ARRAY;
         else if constexpr(std::same_as<T, std::vector<std::int64_t>>)
             return TagType::LONG_ARRAY;
-        else if constexpr(std::same_as<T, NBTCompoundObject>)
+        else if constexpr(std::same_as<T, NBTCompound>)
             return TagType::COMPOUND;
-        else if constexpr(std::same_as<T, NBTListObject>)
+        else if constexpr(std::same_as<T, NBTList>)
             return TagType::LIST;
         else
             return TagType::UNKNOWN;
@@ -91,8 +95,10 @@ namespace mc::NBT
         std::same_as<T, Byte> || std::same_as<T, Short> || std::same_as<T, Int> ||
         std::same_as<T, Long> || std::same_as<T, Float> || std::same_as<T, Double> ||
         std::same_as<T, ByteArray> || std::same_as<T, String> || std::same_as<T, IntArray> ||
-        std::same_as<T, LongArray> || std::same_as<T, NBTCompoundObject> ||
-        std::same_as<T, NBTListObject>;
+        std::same_as<T, LongArray> || std::same_as<T, NBTCompound> ||
+        std::same_as<T, NBTList>;
+
+    void serializeString(std::vector<std::uint8_t>& buffer, const std::string& data);
 
     class NBTTag
     {
@@ -101,9 +107,11 @@ namespace mc::NBT
         NBTTag(TagType type);
         virtual ~NBTTag() = default;
 
-        inline TagType Type() const { return m_tagType; }
+        inline TagType Type() const noexcept { return m_tagType; }
 
-        virtual inline NBTTag* Clone() const { return new NBTTag(*this); }
+        virtual inline NBTTag* Clone() const = 0;
+
+        virtual void Serialize(std::vector<std::uint8_t>& buffer) const = 0;
 
     private:
         TagType m_tagType;
@@ -129,17 +137,33 @@ namespace mc::NBT
         {
         }
 
-        inline const std::string& GetName() const { return m_name; }
+        inline const std::string& GetName() const noexcept { return m_name; }
 
-        inline T& Get() { return m_payload; }
+        inline T& Get() noexcept { return m_payload; }
 
-        inline const T& Get() const { return m_payload; }
+        inline const T& Get() const noexcept { return m_payload; }
 
         inline NBTTag* Clone() const override { return new NBTNamedTag<T>(*this); }
 
-        inline operator T&() { return m_payload; }
+        void Serialize(std::vector<std::uint8_t>& buffer) const override
+        {
+            util::ByteSerializer().Serialize(buffer, (Byte)Type());
+            serializeString(buffer, m_name);
+            if constexpr (std::same_as<T, std::string>)
+            {
+                serializeString(buffer, m_payload);
+            }
+            else
+            {
+                iu::Serializer<T>().Serialize(buffer, m_payload);
+            }
+        }
 
-        inline operator const T&() const { return m_payload; }
+        inline operator T&() noexcept { return m_payload; }
+
+        inline operator const T&() const noexcept { return m_payload; }
+
+        inline T* operator->() noexcept { return &m_payload; }
 
     private:
         T m_payload;
@@ -154,45 +178,78 @@ namespace mc::NBT
 
         NBTUnnamedTag(T&& object) : NBTTag(getTagType<T>()), m_payload(std::move(object)) {}
 
-        inline T& Get() { return m_payload; }
+        inline T& Get() noexcept { return m_payload; }
 
-        inline const T& Get() const { return m_payload; }
+        inline const T& Get() const noexcept { return m_payload; }
 
         inline NBTTag* Clone() const override { return new NBTUnnamedTag<T>(*this); }
 
-        inline operator T&() { return m_payload; }
+        void Serialize(std::vector<std::uint8_t>& buffer) const override
+        {
+            //util::ByteSerializer().Serialize(buffer, (Byte)Type());
+            if constexpr (std::same_as<T, std::string>)
+            {
+                serializeString(buffer, m_payload);
+            }
+            else
+            {
+                iu::Serializer<T>().Serialize(buffer, m_payload);
+            }
+        }
 
-        inline operator const T&() const { return m_payload; }
+        inline operator T&() noexcept { return m_payload; }
+
+        inline operator const T&() const noexcept { return m_payload; }
 
     private:
         T m_payload;
     };
 
-    class NBTCompoundObject
+    class NBTCompound
     {
     public:
-        using TagMap        = std::unordered_map<std::string, NBTTag*>;
-        NBTCompoundObject() = default;
-        NBTCompoundObject(const NBTCompoundObject& other);
-        NBTCompoundObject(NBTCompoundObject&&) = default;
+        using TagMap        = std::unordered_map<std::string, std::unique_ptr<NBTTag>>;
+        NBTCompound() = default;
+        NBTCompound(const NBTCompound& other);
+        NBTCompound(NBTCompound&&) = default;
 
-        NBTCompoundObject& operator=(const NBTCompoundObject& other);
-        NBTCompoundObject& operator=(NBTCompoundObject&&) = default;
-        
-        ~NBTCompoundObject();
+        NBTCompound& operator=(const NBTCompound& other);
+        NBTCompound& operator=(NBTCompound&&) = default;
+
+        ~NBTCompound() = default;
 
         template<CanConstructNBTTag T>
-        void Add(const NBTNamedTag<T>& object)
+        NBTNamedTag<T>& Insert(const NBTNamedTag<T>& object)
         {
             auto obj = new NBTNamedTag<T>(object);
             m_objectsTree.insert(std::make_pair(object.GetName(), obj));
+            return *obj;
         }
 
         template<CanConstructNBTTag T>
-        void Add(NBTNamedTag<T>&& object)
+        NBTNamedTag<T>& Insert(NBTNamedTag<T>&& object)
         {
             auto obj = new NBTNamedTag<T>(std::move(object));
             m_objectsTree.insert(std::make_pair(obj->GetName(), obj));
+            return *obj;
+        }
+
+        template<CanConstructNBTTag T>
+        NBTNamedTag<T>& Insert(const std::string& name, const T& value)
+        {
+            auto insertLocation = m_objectsTree.insert(
+                std::make_pair(name, std::make_unique<NBTNamedTag<T>>(name, value))
+            );
+            return *insertLocation.first->second.get();
+        }
+
+        template<CanConstructNBTTag T>
+        NBTNamedTag<T>& Insert(const std::string& name, T&& value)
+        {
+            auto insertLocation = m_objectsTree.insert(
+                std::make_pair(name, std::make_unique<NBTNamedTag<T>>(name, std::move(value)))
+            );
+            return *dynamic_cast<NBTNamedTag<T>*>(insertLocation.first->second.get());
         }
 
         void Remove(const std::string& name)
@@ -200,7 +257,6 @@ namespace mc::NBT
             auto iter = m_objectsTree.find(name);
             if(iter != m_objectsTree.end())
             {
-                delete iter->second;
                 m_objectsTree.erase(iter);
             }
         }
@@ -209,27 +265,30 @@ namespace mc::NBT
         NBTNamedTag<T>& Get(const std::string& name)
         {
             auto iter = m_objectsTree.find(name);
-            if(iter != m_objectsTree.end())
+            if(iter == m_objectsTree.end())
             {
+                throw std::out_of_range("Element does not exist");
+            }
                 ASSERT(getTagType<T>() == iter->second->Type(),
                     "Requested type differs from actual type");
-                return *dynamic_cast<NBTNamedTag<T>*>(iter->second);
-            }
-            return nullptr;
+                return *dynamic_cast<NBTNamedTag<T>*>(iter->second.get());
         }
 
         template<CanConstructNBTTag T>
         const NBTNamedTag<T>& Get(const std::string& name) const
         {
             auto iter = m_objectsTree.find(name);
-            if(iter != m_objectsTree.end())
+            if(iter == m_objectsTree.end())
             {
+                throw std::out_of_range("Element does not exist");
+            }
                 ASSERT(getTagType<T>() == iter->second->Type(),
                     "Requested type differs from actual type");
-                return *dynamic_cast<NBTNamedTag<T>*>(iter->second);
-            }
-            return nullptr;
+                return *dynamic_cast<NBTNamedTag<T>*>(iter->second.get());
         }
+
+        [[nodiscard("You might want to use the output of Contains :)")]]
+        bool Contains (const std::string& name) const noexcept { return m_objectsTree.find(name) != end();}
 
         TagMap::iterator begin() { return m_objectsTree.begin(); }
 
@@ -240,13 +299,16 @@ namespace mc::NBT
         TagMap::const_iterator end() const { return m_objectsTree.end(); }
 
     private:
-        friend struct std::formatter<mc::NBT::NBTCompoundObject>; 
-        void Copy(const NBTCompoundObject& other);
+
+
+
+        friend struct std::formatter<mc::NBT::NBTCompound>; 
+        void Copy(const NBTCompound& other);
         TagMap m_objectsTree;
         // needs iterators
     };
 
-    class NBTListObject
+    class NBTList
     {
     public:
         using TagPtr = std::unique_ptr<NBTTag>;
@@ -305,6 +367,11 @@ namespace mc::NBT
             inline bool operator>=(const Iterator& other) noexcept
             {
                 return m_it >= other.m_it;
+            }
+
+            inline NBTTag *operator->() noexcept
+            {
+                return m_it->get();
             }
 
             template<CanConstructNBTTag T>
@@ -375,6 +442,11 @@ namespace mc::NBT
                 return m_it >= other.m_it;
             }
 
+            inline const NBTTag *operator->() const noexcept
+            {
+                return m_it->get();
+            }
+
             template<CanConstructNBTTag T>
             const NBTUnnamedTag<T>& get() const
             {
@@ -387,34 +459,58 @@ namespace mc::NBT
             const TagPtr* m_it;
         };
 
-        NBTListObject();
-        NBTListObject(TagType type);
-        NBTListObject(const NBTListObject& other);
-        NBTListObject(NBTListObject&& other) = default;
+        NBTList();
+        NBTList(TagType type);
+        NBTList(const NBTList& other);
+        NBTList(NBTList&& other) = default;
 
-        NBTListObject& operator=(const NBTListObject& other);
-        NBTListObject& operator=(NBTListObject&& other) = default;
+        NBTList& operator=(const NBTList& other);
+        NBTList& operator=(NBTList&& other) = default;
 
         inline TagType TagsType() const { return m_tagsType; }
 
         template<CanConstructNBTTag T>
-        inline void Add(const NBTUnnamedTag<T>& object)
+        inline NBTUnnamedTag<T>& Insert(const NBTUnnamedTag<T>& object)
         {
             if(m_tagsType == TagType::UNKNOWN)
                 m_tagsType = object.Type();
             // Make sure you are requesting the same type that the object contains
             ASSERT(getTagType<T>() == m_tagsType, "Tags type is different than the inserted type");
             m_objectsList.emplace_back(object.Clone());
+            return *dynamic_cast<NBTUnnamedTag<T>*>(m_objectsList.back().get());
         }
 
         template<CanConstructNBTTag T>
-        inline void Add(NBTUnnamedTag<T>&& object)
+        inline NBTUnnamedTag<T>& Insert(NBTUnnamedTag<T>&& object)
         {
             if(m_tagsType == TagType::UNKNOWN)
                 m_tagsType = object.Type();
             // Make sure you are requesting the same type that the object contains
             ASSERT(getTagType<T>() == m_tagsType, "Tags type is different than the inserted type");
             m_objectsList.push_back(std::make_unique<NBTUnnamedTag<T>>(std::move(object)));
+            return *dynamic_cast<NBTUnnamedTag<T>*>(m_objectsList.back().get());
+        }
+
+        template<CanConstructNBTTag T>
+        inline NBTUnnamedTag<T>& Insert(const T& object)
+        {
+            if(m_tagsType == TagType::UNKNOWN)
+                m_tagsType = getTagType<T>();
+            // Make sure you are requesting the same type that the object contains
+            ASSERT(getTagType<T>() == m_tagsType, "Tags type is different than the inserted type");
+            m_objectsList.push_back(std::make_unique<NBTUnnamedTag<T>>(object));
+            return *dynamic_cast<NBTUnnamedTag<T>*>(m_objectsList.back().get());
+        }
+
+        template<CanConstructNBTTag T>
+        inline NBTUnnamedTag<T>& Insert(T&& object)
+        {
+            if(m_tagsType == TagType::UNKNOWN)
+                m_tagsType = getTagType<T>();
+            // Make sure you are requesting the same type that the object contains
+            ASSERT(getTagType<T>() == m_tagsType, "Tags type is different than the inserted type");
+            m_objectsList.push_back(std::make_unique<NBTUnnamedTag<T>>(std::move(object)));
+            return *dynamic_cast<NBTUnnamedTag<T>*>(m_objectsList.back().get());
         }
 
         inline size_t Size() const { return m_objectsList.size(); }
@@ -436,7 +532,7 @@ namespace mc::NBT
         NBTTag& operator[](size_t pos);
         const NBTTag& operator[](size_t pos) const;
 
-        void Assign(const NBTListObject& other);
+        void Assign(const NBTList& other);
 
         inline Iterator begin() { return &m_objectsList.front(); }
 
@@ -461,8 +557,8 @@ namespace mc::NBT
     using NamedByteArray = NBTNamedTag<ByteArray>;
     using NamedIntArray  = NBTNamedTag<IntArray>;
     using NamedLongArray = NBTNamedTag<LongArray>;
-    using NamedCompound  = NBTNamedTag<NBTCompoundObject>;
-    using NamedList      = NBTNamedTag<NBTListObject>;
+    using NamedCompound  = NBTNamedTag<NBTCompound>;
+    using NamedList      = NBTNamedTag<NBTList>;
 
     using UnnamedByte      = NBTUnnamedTag<Byte>;
     using UnnamedShort     = NBTUnnamedTag<Short>;
@@ -474,8 +570,7 @@ namespace mc::NBT
     using UnnamedByteArray = NBTUnnamedTag<ByteArray>;
     using UnnamedIntArray  = NBTUnnamedTag<IntArray>;
     using UnnamedLongArray = NBTUnnamedTag<LongArray>;
-    using UnnamedCompound  = NBTUnnamedTag<NBTCompoundObject>;
-    using UnnamedList      = NBTUnnamedTag<NBTListObject>;
+    using UnnamedCompound  = NBTUnnamedTag<NBTCompound>;
 } // namespace mc::NBT
 
 //FMT FORMATTERS
@@ -503,16 +598,59 @@ struct std::formatter<mc::NBT::NBTUnnamedTag<T>> : public std::formatter<std::st
     }
 };
 
-//SERIALIZERS
-
-template<mc::NBT::CanConstructNBTTag T>
-struct iu::Serializer<mc::NBT::NBTUnnamedTag<T>>
+template<>
+struct std::formatter<mc::NBT::NBTList> : public std::formatter<std::string>
 {
-    void Serialize(std::vector<uint8_t>& buffer, const mc::NBT::NBTUnnamedTag<T>& object)
+    template<typename FmtContext>
+    FmtContext::iterator format(const mc::NBT::NBTList& my, FmtContext& ctx) const
     {
-        iu::Serializer<T> serializer;
-        serializer.Serialize(buffer, object.Get());
+        //my.TagsType()
+
+        return ctx.out();
     }
 };
+
+//SERIALIZERS
+    template<>
+    struct iu::Serializer<mc::NBT::NBTCompound>
+    {
+        void Serialize(std::vector<uint8_t>& buffer, const mc::NBT::NBTCompound& object)
+        {
+            for (const auto& [name, tag] : object)
+                tag->Serialize(buffer);
+
+            buffer.push_back((uint8_t)mc::NBT::TagType::END);
+        }
+    };
+
+    template<>
+    struct iu::Serializer<mc::NBT::NBTList>
+    {
+        void Serialize(std::vector<uint8_t>& buffer, const mc::NBT::NBTList& object)
+        {
+            mc::util::ByteSerializer().Serialize(buffer, (mc::NBT::Byte)object.TagsType());
+            mc::util::IntSerializer().Serialize(buffer, object.Size());
+            for (auto tag = object.begin(); tag != object.end(); ++tag)
+                tag->Serialize(buffer);
+        }
+    };
+
+    template<mc::NBT::CanConstructNBTTag T>
+    struct iu::Serializer<mc::NBT::NBTUnnamedTag<T>>
+    {
+        void Serialize(std::vector<uint8_t>& buffer, const mc::NBT::NBTUnnamedTag<T>& object)
+        {
+            object.Serialize(buffer);
+        }
+    };
+
+    template<mc::NBT::CanConstructNBTTag T>
+    struct iu::Serializer<mc::NBT::NBTNamedTag<T>>
+    {
+        void Serialize(std::vector<uint8_t>& buffer, const mc::NBT::NBTNamedTag<T>& object)
+        {
+            object.Serialize(buffer);
+        }
+    };
 
 #endif // NBT_H

@@ -4,6 +4,8 @@
 #include <SFW/Serializer.h>
 #include <SFW/Logger.h>
 #include <SFW/LoggerManager.h>
+#include <concepts>
+#include <cstdint>
 #include <nlohmann/json.hpp>
 
 #include <bits/iterator_concepts.h>
@@ -12,6 +14,7 @@
 #include <stdexcept>
 #include <ranges>
 #include <string_view>
+#include <iterator>
 #include <vector>
 #include <format>
 
@@ -39,8 +42,8 @@ namespace mc
         constexpr inline uint8_t CONTINUE_BIT = 0x80;
 
         template<typename T>
-        concept IteratorU8 =
-            std::same_as<typename T::value_type, uint8_t>&& std::input_or_output_iterator<T>;
+        concept IteratorU8 = 
+            std::same_as<typename T::value_type, uint8_t> && std::input_or_output_iterator<T>;
 
         template<typename T>
         concept PacketID =
@@ -49,6 +52,8 @@ namespace mc
             std::same_as<T, server::StatusPacketID> || std::same_as<T, client::LoginPacketID> ||
             std::same_as<T, server::LoginPacketID> || std::same_as<T, client::PlayPacketID>;
 
+        template<typename T>
+        concept Numeric = std::integral<T> || std::floating_point<T>;
         class uuid
         {
         public:
@@ -197,14 +202,16 @@ struct iu::Serializer<std::vector<S>>
     }
 };
 
-template<std::integral Integral>
-struct iu::Serializer<Integral>
+template<mc::util::Numeric T>
+struct iu::Serializer<T> 
 {
-    void Serialize(std::vector<uint8_t>& buffer, Integral toSerialize)
+    void Serialize(std::vector<uint8_t>& buffer, T toSerialize)
     {
         uint8_t* data = reinterpret_cast<uint8_t*>(&toSerialize);
-        for(size_t i; i < sizeof(toSerialize); ++i)
+        for(size_t i = sizeof(toSerialize) - 1; i != -1; --i)
+        {
             buffer.push_back(data[i]);
+        }
     }
 };
 
@@ -223,8 +230,11 @@ struct iu::Serializer<mc::util::uuid>
 namespace mc::util
 {
     using BoolSerializer = iu::Serializer<bool>;
+    using ByteSerializer = iu::Serializer<std::uint8_t>;
+    using ShortSerializer = iu::Serializer<std::uint16_t>;
     using IntSerializer  = iu::Serializer<std::int32_t>;
     using LongSerializer = iu::Serializer<std::int64_t>;
-    using ByteSerializer = iu::Serializer<std::uint8_t>;
+    using FloatSerializer = iu::Serializer<float>;
+    using DoubleSerializer = iu::Serializer<double>;
 } // namespace mc::util
 #endif // UTILS_H
