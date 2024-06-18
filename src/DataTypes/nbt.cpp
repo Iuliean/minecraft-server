@@ -1,102 +1,101 @@
 #include "DataTypes/nbt.h"
-namespace mc
+#include "utils.h"
+#include <iterator>
+namespace mc::NBT
 {
-    namespace NBT
+
+    void serializeString(std::vector<std::uint8_t>& buffer, const std::string &data)
     {
-        NBTTag::NBTTag(TagType type)
-            : m_tagType(type)
-        {}
+        util::ShortSerializer().Serialize(buffer, data.size());
+        buffer.insert(buffer.end(), data.begin(), data.end());
+    }
 
-        NBTTag::NBTTag()
-            : m_tagType(TagType::UNKNOWN)
-        {}
+    NBTTag::NBTTag(TagType type)
+        : m_tagType(type)
+    {}
 
-        NBTCompoundObject::NBTCompoundObject(const NBTCompoundObject& other)
-        {
-            Copy(other);
-        }
+    NBTTag::NBTTag()
+        : m_tagType(TagType::UNKNOWN)
+    {}
 
-        NBTCompoundObject::~NBTCompoundObject()
-        {
-            for(auto tag : m_objectsTree)
-            {
-                delete tag.second;
-            }
-        }
-        NBTCompoundObject& NBTCompoundObject::operator=(const NBTCompoundObject& other)
-        {
-            Copy(other);
-            return *this;
-        }
+    NBTCompound::NBTCompound(const NBTCompound& other)
+    {
+        Copy(other);
+    }
 
-        void NBTCompoundObject::Copy(const NBTCompoundObject& other)
-        {
-            for(auto& tag : other.m_objectsTree)
-            {
-                m_objectsTree.insert(std::make_pair(tag.first, tag.second->Clone()));
-            }
-        }
-        /* ***************************** NBTListObject ***************************** */
+    NBTCompound& NBTCompound::operator=(const NBTCompound& other)
+    {
+        Copy(other);
+        return *this;
+    }
 
-        NBTListObject::Iterator::Iterator(TagPtr* it)
-            : m_it(it)
+    void NBTCompound::Copy(const NBTCompound& other)
+    {
+        for(auto& tag : other.m_objectsTree)
         {
+            m_objectsTree.insert(std::make_pair(tag.first, tag.second->Clone()));
         }
+    }
+    /* ***************************** NBTList ***************************** */
 
-        NBTListObject::ConstIterator::ConstIterator(const TagPtr* it)
-            : m_it(it)
-        {
-        }
+    NBTList::Iterator::Iterator(TagPtr* it)
+        : m_it(it)
+    {
+    }
 
-        NBTListObject::NBTListObject()
-            : m_tagsType(TagType::UNKNOWN)
-        {
-        }
+    NBTList::ConstIterator::ConstIterator(const TagPtr* it)
+        : m_it(it)
+    {
+    }
 
-        NBTListObject::NBTListObject(TagType type)
-            : m_tagsType(type)
-        {
-        }
+    NBTList::NBTList()
+        : m_tagsType(TagType::UNKNOWN)
+    {
+    }
 
-        NBTListObject::NBTListObject(const NBTListObject& other)
-            : NBTListObject()
-        {
-            Assign(other);
-        }
+    NBTList::NBTList(TagType type)
+        : m_tagsType(type)
+    {
+    }
 
-        NBTListObject& NBTListObject::operator=(const NBTListObject &other)
-        {
-            Assign(other);
-            return *this;
-        }
+    NBTList::NBTList(const NBTList& other)
+        : NBTList()
+    {
+        Assign(other);
+    }
 
-        NBTTag& NBTListObject::operator[](size_t pos)
-        {
-            ASSERT(pos < Size(), "Out of bounds access");
-            return *m_objectsList[pos].get();
-        }
+    NBTList& NBTList::operator=(const NBTList &other)
+    {
+        Assign(other);
+        return *this;
+    }
+
+    NBTTag& NBTList::operator[](size_t pos)
+    {
+        ASSERT(pos < Size(), "Out of bounds access");
+        return *m_objectsList[pos].get();
+    }
          
-        const NBTTag& NBTListObject::operator[](size_t pos) const
-        {
-            ASSERT(pos < Size(), "Out of bounds access");
-            return *m_objectsList[pos].get();
-        }
+    const NBTTag& NBTList::operator[](size_t pos) const
+    {
+        ASSERT(pos < Size(), "Out of bounds access");
+        return *m_objectsList[pos].get();
+    }
 
-        void NBTListObject::Assign(const NBTListObject& other)
+    void NBTList::Assign(const NBTList& other)
+    {
+        m_tagsType = other.m_tagsType;
+        
+        //Deallocate any existing objects
+        if (m_objectsList.size() > 0)
+            m_objectsList.clear();
+        
+        if(other.m_objectsList.size() == 0)
+            return;
+        
+        for(auto& obj : other.m_objectsList)
         {
-            m_tagsType = other.m_tagsType;
-            
-            //Deallocate any existing objects
-            if (m_objectsList.size() > 0)
-                m_objectsList.clear();
-            
-            if(other.m_objectsList.size() == 0)
-                return;
-            
-            for(auto& obj : other.m_objectsList)
-            {
-                m_objectsList.emplace_back(obj->Clone());
-            }            
+            m_objectsList.emplace_back(obj->Clone());
         }
     }
 }

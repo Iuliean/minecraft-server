@@ -25,7 +25,7 @@ namespace mc
 
         template<util::PacketID T>
         typename std::remove_const<T>::type GetId()const;
-            
+
         virtual std::string AsString()const; 
         virtual constexpr std::string PacketName()const;
     protected:
@@ -37,7 +37,7 @@ namespace mc
     {
         return (typename std::remove_const<T>::type)m_id;
     }
-        
+
     inline std::string Packet::AsString()const
     {
         return "{Id: " + std::to_string(m_id) + "}";
