@@ -4,7 +4,8 @@
 #include <SFW/Serializer.h>
 #include <concepts>
 #include <cstring>
-#include <iterator>
+#include <filesystem>
+#include <format>
 #include <stdexcept>
 #include <sys/types.h>
 #include <utils.h>
@@ -16,7 +17,7 @@
 #include <string>
 #include <utility>
 #include <vector>
-
+#include <fstream>
 namespace mc::NBT
 {
     enum class TagType
@@ -39,7 +40,7 @@ namespace mc::NBT
         LONG_ARRAY
     };
 
-    using Byte   = std::uint8_t;
+    using Byte   = std::int8_t;
     using Short  = std::int16_t;
     using Int    = std::int32_t;
     using Long   = std::int64_t;
@@ -62,7 +63,7 @@ namespace mc::NBT
     template<typename T>
     consteval inline TagType getTagType()
     {
-        if constexpr(std::same_as<T, std::uint8_t>)
+        if constexpr(std::same_as<T, std::int8_t>)
             return TagType::BYTE;
         else if constexpr(std::same_as<T, std::int16_t>)
             return TagType::SHORT;
@@ -74,7 +75,7 @@ namespace mc::NBT
             return TagType::FLOAT;
         else if constexpr(std::same_as<T, double>)
             return TagType::DOUBLE;
-        else if constexpr(std::same_as<T, std::vector<std::uint8_t>>)
+        else if constexpr(std::same_as<T, std::vector<std::int8_t>>)
             return TagType::BYTE_ARRAY;
         else if constexpr(std::same_as<T, std::string>)
             return TagType::STRING;
@@ -100,6 +101,15 @@ namespace mc::NBT
 
     void serializeString(std::vector<std::uint8_t>& buffer, const std::string& data);
 
+    template<typename T>
+    void serializeArray(std::vector<std::uint8_t>& buffer, const std::vector<T>& data)
+    {
+        util::IntSerializer().Serialize(buffer, data.size());
+        iu::Serializer<T> s;
+        for (const auto element : data)
+            s.Serialize(buffer, element);
+    }
+
     class NBTTag
     {
     public:
@@ -112,6 +122,8 @@ namespace mc::NBT
         virtual inline NBTTag* Clone() const = 0;
 
         virtual void Serialize(std::vector<std::uint8_t>& buffer) const = 0;
+
+        virtual std::string AsString() const = 0;
 
     private:
         TagType m_tagType;
@@ -153,10 +165,19 @@ namespace mc::NBT
             {
                 serializeString(buffer, m_payload);
             }
+            else if constexpr (std::same_as<T, ByteArray> || std:: same_as<T, IntArray> || std::same_as<T, LongArray>)
+            {
+                serializeArray(buffer, m_payload);
+            }
             else
             {
                 iu::Serializer<T>().Serialize(buffer, m_payload);
             }
+        }
+
+        inline std::string AsString () const override
+        {
+            return std::format("{}:{}", m_name, m_payload);
         }
 
         inline operator T&() noexcept { return m_payload; }
@@ -186,15 +207,23 @@ namespace mc::NBT
 
         void Serialize(std::vector<std::uint8_t>& buffer) const override
         {
-            //util::ByteSerializer().Serialize(buffer, (Byte)Type());
             if constexpr (std::same_as<T, std::string>)
             {
                 serializeString(buffer, m_payload);
+            }
+            else if constexpr (std::same_as<T, ByteArray> || std:: same_as<T, IntArray> || std::same_as<T, LongArray>)
+            {
+                serializeArray(buffer, m_payload);
             }
             else
             {
                 iu::Serializer<T>().Serialize(buffer, m_payload);
             }
+        }
+
+        inline std::string AsString () const override
+        {
+            return std::format("{}", m_payload);
         }
 
         inline operator T&() noexcept { return m_payload; }
@@ -571,9 +600,27 @@ namespace mc::NBT
     using UnnamedIntArray  = NBTUnnamedTag<IntArray>;
     using UnnamedLongArray = NBTUnnamedTag<LongArray>;
     using UnnamedCompound  = NBTUnnamedTag<NBTCompound>;
+
+    using NBT = NamedCompound;
+
+    NBT parse(std::istream&& data);
+
+    inline NBT parse(std::filesystem::path file) { return parse(std::ifstream(file.c_str(), std::ios::binary));}
+
 } // namespace mc::NBT
 
 //FMT FORMATTERS
+
+template<>
+struct std::formatter<mc::NBT::NBTTag> : public std::formatter<std::string>
+{
+    template<typename FmtContext>
+    FmtContext::iterator format(const mc::NBT::NBTTag& my, FmtContext& ctx) const
+    {
+        return std::format_to(ctx.out(), "{}", my.AsString());
+    }
+};
+
 template<mc::NBT::CanConstructNBTTag T>
 struct std::formatter<mc::NBT::NBTNamedTag<T>> : public std::formatter<std::string>
 {
@@ -604,7 +651,24 @@ struct std::formatter<mc::NBT::NBTList> : public std::formatter<std::string>
     template<typename FmtContext>
     FmtContext::iterator format(const mc::NBT::NBTList& my, FmtContext& ctx) const
     {
-        //my.TagsType()
+        for(auto it = my.begin(); it < my.end(); it++)
+        {
+            std::format_to(ctx.out(), "{}", it->AsString());
+        }
+        return ctx.out();
+    }
+};
+
+template<>
+struct std::formatter<mc::NBT::NBTCompound> : public std::formatter<std::string>
+{
+    template<typename FmtContext>
+    FmtContext::iterator format(const mc::NBT::NBTCompound& my, FmtContext& ctx) const
+    {
+        for(auto& it : my)
+        {
+            std::format_to(ctx.out(), "{}", it.second->AsString());
+        }
 
         return ctx.out();
     }
