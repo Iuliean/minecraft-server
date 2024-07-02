@@ -16,7 +16,7 @@ namespace mc
         void HandleConnection(iu::Connection& connection)override;
         void OnConnected(iu::Connection& connection)override;
         void Stop()override;
-        
+
     private:
         iu::Logger m_logger;
         std::atomic_bool m_stop;

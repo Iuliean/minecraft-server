@@ -139,23 +139,20 @@ namespace mc
 
 // FMT FORMATTERS
 /*
-template<typename T> requires (std::ranges::range<T> && !std::same_as<T, std::string> && !std::same_as<T, fmt::v9::basic_string_view<char>>)
-struct fmt::formatter<T> : fmt::formatter<std::string> 
+template<typename T> requires (std::ranges::range<T>)
+struct std::formatter<T> : std::formatter<std::string>
 {
-    auto format(const T& my, format_context& ctx) const -> decltype(ctx.out())
+    template<typename FmtContext>
+    auto format(const T& my, FmtContext& ctx) const
     {
-        std::string out = "{";
-        for(const auto& value : my)
+        for (const auto& v : my)
         {
-            out.append(fmt::format("{}", value)).append(", ");
+            std::format_to(ctx.out(), "{}", v);
         }
-        out.pop_back();
-        out.pop_back();
-        out.append("}");
-        return fmt::format_to(ctx.out(), "{}", out);
+        return ctx.out();
     }
-};
-*/
+};*/
+
 template<>
 struct std::formatter<mc::util::uuid> : public std::formatter<std::string>
 {
@@ -179,7 +176,7 @@ struct std::formatter<nlohmann::json> : public std::formatter<std::string>
 template<std::ranges::input_range T>
 struct std::formatter<T> : public std::formatter<std::string>
 {
-        template<typename FmtContext>
+    template<typename FmtContext>
     FmtContext::iterator format(const T& my, FmtContext& ctx) const
     {
         for (const auto& el : my)
@@ -203,7 +200,7 @@ struct iu::Serializer<std::vector<S>>
 };
 
 template<mc::util::Numeric T>
-struct iu::Serializer<T> 
+struct iu::Serializer<T>
 {
     void Serialize(std::vector<uint8_t>& buffer, T toSerialize)
     {
