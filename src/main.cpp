@@ -10,7 +10,7 @@ int main()
     iu::LoggerManager::Init();
     iu::LoggerManager::SetLevel(iu::LogLevel::DEBUG);
 
-#if 0
+#if 1
     iu::AggregateServer<mc::MinecraftHanlder> server("0.0.0.0", 25565);
     std::thread serverThread([&server](){
         server.Run();

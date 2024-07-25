@@ -3,6 +3,7 @@
 
 #include "ClientPackets.h"
 #include "DataTypes/Identifier.h"
+#include "DataTypes/nbt.h"
 #include "Packet.h"
 #include "DataTypes/Position.h"
 #include <SFW/Serializer.h>
@@ -31,10 +32,16 @@ namespace mc::server
         SUCCESS = 2
     };
 
+    enum class ConfigPacketID : int
+    {
+        UNKNOWN = -1,
+        FinishConfiguration = 0x03,
+    };
+
     enum class PlayPacketID : int
     {
         UNKNOWN   = -1,
-        LoginPlay = 0x29
+        LoginPlay = 0x2b
     };
 
     // ****************
@@ -60,6 +67,7 @@ namespace mc::server
         util::uuid m_uuid;
         std::string m_name;
         int m_numOfElements;
+        bool m_strictErrorHandling;
     };
 
     // *****************
@@ -82,6 +90,20 @@ namespace mc::server
 
     private:
         nlohmann::json m_payload;
+    };
+    // *****************
+    // * ConfigPackets *
+    // *****************
+
+   class FinishConfiguration : public Packet
+    {
+        public:
+            FinishConfiguration()
+                : Packet((int)ConfigPacketID::FinishConfiguration)
+            {
+            }
+
+            ~FinishConfiguration() = default;
     };
 
     // ****************
@@ -142,7 +164,7 @@ namespace mc::server
         bool m_reducedDebugInfo;
         bool m_enableRespawnScreen;
         bool m_limitedCrafting;
-        Identifier m_dimensionType;
+        int m_dimensionType;
         Identifier m_dimensionName;
         int64_t m_seedHash;
         uint8_t m_gameMode;
@@ -153,6 +175,7 @@ namespace mc::server
         std::optional<Identifier> m_deathDimension;
         std::optional<Position> m_deathPosition;
         int32_t m_portalCooldown;
+        bool m_enforceSecureChat;
     };
 
 } // namespace mc::server
@@ -165,13 +188,14 @@ struct iu::Serializer<mc::server::LoginSuccessPacket>
         using namespace mc::util;
         // size of uuid 16 bytes(128bits) + size of name string + count of
         // elements (atm 0) + id
-        const int packetSize = 128 / 8 + sizeOfString(toSerialize.GetName()) + 2;
+        const int packetSize = 128 / 8 + sizeOfString(toSerialize.GetName()) + 3;
         Serializer<uuid> uuidSerializer;
 
         writeVarInt(buffer, packetSize);
         writeVarInt(buffer, toSerialize.GetId<int>());
         uuidSerializer.Serialize(buffer, toSerialize.GetUUID());
         writeStringToBuff(buffer, toSerialize.GetName());
+        writeVarInt(buffer, 0);
         writeVarInt(buffer, 0);
     }
 };
@@ -190,6 +214,17 @@ struct iu::Serializer<mc::server::StatusPacket>
 };
 
 template<>
+struct iu::Serializer<mc::server::FinishConfiguration>
+{
+    void Serialize(std::vector<uint8_t>& buffer, const mc::server::FinishConfiguration& toSerialize)
+    {
+        using namespace mc::util;
+        writeVarInt(buffer, 1);
+        writeVarInt(buffer, toSerialize.GetId<int>());
+    }
+};
+
+template<>
 struct iu::Serializer<mc::server::LoginPlayPacket>
 {
     void Serialize(std::vector<uint8_t>& buffer, const mc::server::LoginPlayPacket& toSerialize)
@@ -204,6 +239,7 @@ struct iu::Serializer<mc::server::LoginPlayPacket>
         Serializer<mc::Position> positionSerializer;
         Serializer<std::vector<mc::Identifier>> identifierVecSerializer;
 
+        writeVarInt(buffer, toSerialize.GetId<int>());
         intSerializer.Serialize(buffer, toSerialize.m_entityID);
         boolSerializer.Serialize(buffer, toSerialize.m_isHardcore);
         writeVarInt(buffer, toSerialize.m_dimensionIdentifiers.size());
@@ -214,19 +250,24 @@ struct iu::Serializer<mc::server::LoginPlayPacket>
         boolSerializer.Serialize(buffer, toSerialize.m_reducedDebugInfo);
         boolSerializer.Serialize(buffer, toSerialize.m_enableRespawnScreen);
         boolSerializer.Serialize(buffer, toSerialize.m_limitedCrafting);
-        identifierSerializer.Serialize(buffer, toSerialize.m_dimensionType);
+        writeVarInt(buffer, toSerialize.m_dimensionType);
         identifierSerializer.Serialize(buffer, toSerialize.m_dimensionName);
         int64Serializer.Serialize(buffer, toSerialize.m_seedHash);
         byteSerialier.Serialize(buffer, toSerialize.m_gameMode);
+        byteSerialier.Serialize(buffer, toSerialize.m_previousGameMode);
         boolSerializer.Serialize(buffer, toSerialize.m_isDebug);
         boolSerializer.Serialize(buffer, toSerialize.m_isFlat);
+        byteSerialier.Serialize(buffer, 0);
 
-        if(toSerialize.m_deathDimension.has_value())
-            identifierSerializer.Serialize(buffer, toSerialize.m_deathDimension.value().AsString());
-        if(toSerialize.m_deathPosition.has_value())
-            positionSerializer.Serialize(buffer, toSerialize.m_deathPosition.value());
+        //if(toSerialize.m_deathDimension.has_value())
+        //    identifierSerializer.Serialize(buffer, toSerialize.m_deathDimension.value().AsString());
+        //if(toSerialize.m_deathPosition.has_value())
+        //    positionSerializer.Serialize(buffer, toSerialize.m_deathPosition.value());
 
         writeVarInt(buffer, toSerialize.m_portalCooldown);
+        byteSerialier.Serialize(buffer, toSerialize.m_enforceSecureChat);
+
+        writeVarInt(buffer, 0, buffer.size());
     }
 };
 

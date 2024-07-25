@@ -602,6 +602,7 @@ namespace mc::NBT
     using UnnamedCompound  = NBTUnnamedTag<NBTCompound>;
 
     using NBT = NamedCompound;
+    using NBTSerializer = iu::Serializer<NBT>;
 
     NBT parse(std::istream&& data);
 

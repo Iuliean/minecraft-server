@@ -25,6 +25,7 @@ namespace mc
     {
         enum class IdlePacketID;
         enum class StatusPacketID;
+        enum class ConfigPacketID;
         enum class LoginPacketID;
     } // namespace server
 
@@ -33,6 +34,7 @@ namespace mc
         enum class IdlePacketID;
         enum class StatusPacketID;
         enum class LoginPacketID;
+        enum class ConfigPacketID;
         enum class PlayPacketID;
     } // namespace client
 
@@ -48,8 +50,9 @@ namespace mc
         template<typename T>
         concept PacketID =
             std::same_as<T, int> || std::same_as<T, client::IdlePacketID> ||
-            std::same_as<T, server::IdlePacketID> || std::same_as<T, client::StatusPacketID> ||
-            std::same_as<T, server::StatusPacketID> || std::same_as<T, client::LoginPacketID> ||
+            std::same_as<T, server::IdlePacketID> || std::same_as<T, client::StatusPacketID>   ||
+            std::same_as<T, server::StatusPacketID> || std::same_as<T, client::LoginPacketID>  ||
+            std::same_as<T, server::ConfigPacketID> || std::same_as<T, client::ConfigPacketID> ||
             std::same_as<T, server::LoginPacketID> || std::same_as<T, client::PlayPacketID>;
 
         template<typename T>
@@ -95,8 +98,7 @@ namespace mc
             uint8_t position = 0;
 
             while(true)
-            {  
-                iu::LoggerManager::GlobalLogger().info("{}", *begin);
+            {
                 value |= (*begin & SEGMENT_BIT) << position;
 
                 if((*begin & CONTINUE_BIT) == 0)

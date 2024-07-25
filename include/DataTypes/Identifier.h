@@ -20,7 +20,8 @@ namespace mc
         }
 
     private:
-        static std::regex s_allowedCharacters;
+        static std::regex s_allowedNamespaceCharacters;
+        static std::regex s_allowedValueCharacters;
         std::string m_category;
         std::string m_value;
     };

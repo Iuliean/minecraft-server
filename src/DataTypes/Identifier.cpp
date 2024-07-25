@@ -2,7 +2,8 @@
 
 namespace mc
 {
-        std::regex Identifier::s_allowedCharacters{"[a-z0-9.-_]"};
+        std::regex Identifier::s_allowedNamespaceCharacters{"[a-z0-9.-_]"};
+        std::regex Identifier::s_allowedValueCharacters{"[a-z0-9.-_/]"};
 
         Identifier::Identifier(const std::string& category, const std::string& value)
         {
@@ -12,9 +13,9 @@ namespace mc
             util::toLower(m_value);
             util::toLower(m_category);
 
-            if (!std::regex_match(m_value, s_allowedCharacters))
+            if (!std::regex_match(m_value, s_allowedValueCharacters))
                 throw std::runtime_error("Value does not respect character restrictions");
-            if (!std::regex_match(m_category, s_allowedCharacters))
+            if (!std::regex_match(m_category, s_allowedNamespaceCharacters))
                 throw std::runtime_error("Category does not respect character restrictions");
         }
 
@@ -23,8 +24,8 @@ namespace mc
         {
             m_value = value;
             util::toLower(m_value);
-            
-            if (!std::regex_match(m_value, s_allowedCharacters))
+
+            if (std::regex_match(m_value, s_allowedValueCharacters))
                 throw std::runtime_error("Value does not respect character restrictions");
         }
 }

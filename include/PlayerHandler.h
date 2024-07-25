@@ -8,6 +8,7 @@
 
 #include "Packet.h"
 #include "ClientPackets.h"
+#include "ServerContext.h"
 #include "ServerPackets.h"
 #include "utils.h"
 
@@ -18,13 +19,21 @@ namespace mc
         IDLE    = 0,
         STATUS  = 1,
         LOGIN   = 2,
-        PLAY    = 3
+        CONFIG  = 3,
+        PLAY    = 4
     };
 
     class PlayerHandler
     {
     public:
-        PlayerHandler(iu::Connection& client);
+        PlayerHandler() = delete;
+        PlayerHandler(const PlayerHandler&) = delete;
+        PlayerHandler(PlayerHandler&&) = delete;
+
+        PlayerHandler& operator=(const PlayerHandler&) = delete;
+        PlayerHandler& operator=(PlayerHandler&&) = delete;
+
+        PlayerHandler(iu::Connection& client, const ServerContext& context);
         ~PlayerHandler() = default;
 
         void Execute(const std::vector<uint8_t>& data);
@@ -32,6 +41,7 @@ namespace mc
         void OnIdle(Packet::PacketPtr&& genericPacket);
         void OnStatus(Packet::PacketPtr&& genericPacket);
         void OnLogin(Packet::PacketPtr&& genericPacket);
+        void OnConfig(Packet::PacketPtr&& genericPacket);
         void OnPlay(Packet::PacketPtr&& genericPacket);
 
         void PlayLoop();
@@ -43,7 +53,7 @@ namespace mc
             using namespace mc::client;
             int packetSize = util::readVarInt(dataIter);
             int packetID;
-            
+
             if (packetSize == 0)
                 return nullptr;
             packetID = util::readVarInt(dataIter);
@@ -56,7 +66,7 @@ namespace mc
                     m_logger.warn("Invalid idle packetID: {:0x}", packetID);
                     return nullptr;
             }
-        }    
+        }
 
         template<util::IteratorU8 Iter>
         Packet::PacketPtr NextPacketStatus(Iter& dataIter)
@@ -64,7 +74,7 @@ namespace mc
             using namespace mc::client;
             int packetSize = util::readVarInt(dataIter);
             int packetID;
-            
+
             if(packetSize == 0)
                 return nullptr;
 
@@ -98,6 +108,31 @@ namespace mc
             {
                 case LoginPacketID::START:
                     return std::make_unique<LoginStartPacket>(dataIter);
+                case LoginPacketID::LoginAcknowledged:
+                    return std::make_unique<LoginAckPacket>();
+                default:
+                    //maybe needs to throw
+                    m_logger.warn("Invalid status packetID: {:0x}", packetID);
+                    return nullptr; 
+            }
+        }
+
+        template<util::IteratorU8 Iter>
+        Packet::PacketPtr NextPacketConfig(Iter& dataIter)
+        {
+            using namespace mc::client;
+            int packetSize = util::readVarInt(dataIter);
+            int packetID;
+
+            if(packetSize == 0)
+                return nullptr;
+
+            packetID = util::readVarInt(dataIter);
+
+            switch(static_cast<ConfigPacketID>(packetID))
+            {
+                case mc::client::ConfigPacketID::AcknowledgeConfigEnd:
+                    return std::make_unique<AcknowledgeConfig>();
                 default:
                     //maybe needs to throw
                     m_logger.warn("Invalid status packetID: {:0x}", packetID);
@@ -116,20 +151,19 @@ namespace mc
                 return nullptr;
 
             packetID = util::readVarInt(dataIter);
-            
+
             switch(static_cast<PlayPacketID>(packetID))
             {
-                case PlayPacketID::LoginAcknowledged:
-                    return std::make_unique<LoginAckPacket>();
-                    break;
+
                 default:
                     m_logger.warn("Invalid play packetID: {:0x}", packetID);
                     return nullptr;
             }
         }
-        
+
         iu::Connection& m_client;
         PlayerHandlerState m_state;
+        const ServerContext& m_context;
         iu::Logger m_logger;
         server::StatusPacket m_statusMessage;
     };

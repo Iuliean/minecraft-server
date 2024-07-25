@@ -49,7 +49,7 @@ namespace mc
             buffer.push_back((value & SEGMENT_BIT) | CONTINUE_BIT);
             value >>= 7;
             }
-        
+
         }
 
         void writeVarInt(std::vector<uint8_t>&buffer, size_t pos, int value)

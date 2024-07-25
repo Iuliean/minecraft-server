@@ -27,13 +27,20 @@ namespace mc
         enum class LoginPacketID : int
         {
             UNKNOWN = -1,
-            START   = 0
+            START   = 0,
+            LoginAcknowledged = 0x03
+
+        };
+
+        enum class ConfigPacketID : int
+        {
+            UNKNOWN = -1,
+            AcknowledgeConfigEnd = 0x03
         };
 
         enum class PlayPacketID : int
         {
             UNKNOWN           = -1,
-            LoginAcknowledged = 0x03
         };
 
         // ***************
@@ -102,6 +109,19 @@ namespace mc
             uint64_t m_payload;
         };
 
+        // *****************
+        // * ConfigPackets *
+        // *****************
+
+        class AcknowledgeConfig : public Packet
+        {
+        public:
+            AcknowledgeConfig()
+                : Packet((int)ConfigPacketID::AcknowledgeConfigEnd)
+            {}
+            ~AcknowledgeConfig() = default;
+        };
+
         // ****************
         // * LoginPackets *
         // ****************
@@ -137,7 +157,7 @@ namespace mc
         class LoginAckPacket : public Packet
         {
         public:
-            LoginAckPacket() : Packet(PlayPacketID::LoginAcknowledged) {}
+            LoginAckPacket() : Packet(LoginPacketID::LoginAcknowledged) {}
         };
 
         // INLINES
