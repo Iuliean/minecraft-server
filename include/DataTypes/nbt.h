@@ -604,9 +604,13 @@ namespace mc::NBT
     using NBT = NamedCompound;
     using NBTSerializer = iu::Serializer<NBT>;
 
-    NBT parse(std::istream&& data);
+    NBT parse(std::istream& data);
 
-    inline NBT parse(std::filesystem::path file) { return parse(std::ifstream(file.c_str(), std::ios::binary));}
+    inline NBT parse(std::filesystem::path file)
+    {
+        std::ifstream f(file.c_str(), std::ios::binary);
+        return parse(f);
+    }
 
 } // namespace mc::NBT
 

@@ -271,7 +271,7 @@ namespace mc::NBT
     }
 
 
-    NBT parse(std::istream&& data)
+    NBT parse(std::istream& data)
     {
         if (parseTagType(data) != TagType::COMPOUND)
         {

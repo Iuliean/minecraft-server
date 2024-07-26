@@ -48,7 +48,7 @@ namespace mc::server
         m_dimensionType(0),
         m_dimensionName(Identifier("overworld")),
         m_seedHash(12312312),
-        m_gameMode(1),
+        m_gameMode(3),
         m_previousGameMode(-1),
         m_isDebug(false),
         m_isFlat(false),
