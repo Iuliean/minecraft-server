@@ -235,5 +235,8 @@ namespace mc::util
     using LongSerializer = iu::Serializer<std::int64_t>;
     using FloatSerializer = iu::Serializer<float>;
     using DoubleSerializer = iu::Serializer<double>;
+
+    using varInt = int; //packets hold both ints and varInt this helps to distinguish
+    using varLong = long; //same as above
 } // namespace mc::util
 #endif // UTILS_H

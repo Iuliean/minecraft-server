@@ -7,7 +7,9 @@
 
 namespace mc::server
 {
-
+    // ****************
+    // * LoginPackets *
+    // ****************
     LoginSuccessPacket::LoginSuccessPacket(const client::LoginStartPacket& packet)
         : Packet(LoginPacketID::SUCCESS),
           m_uuid(packet.GetUUID()),
@@ -16,7 +18,9 @@ namespace mc::server
           m_strictErrorHandling(true)
     {
     }
-
+    // *****************
+    // * StatusPackets *
+    // *****************
     StatusPacket::StatusPacket() : Packet(StatusPacketID::STATUS)
     {
         // FORMATED
@@ -33,7 +37,17 @@ namespace mc::server
             { "enforceSecureChat", true },
             { "previewsChat", true } };
     }
+    // *****************
+    // * ConfigPackets *
+    // *****************
+    FinishConfiguration::FinishConfiguration()
+        : Packet((int)ConfigPacketID::FinishConfiguration)
+    {
+    }
 
+    // ****************
+    // * PlayPackets *
+    // ****************
     LoginPlayPacket::LoginPlayPacket()
         : Packet((int)PlayPacketID::LoginPlay),
         m_entityID(243645754),
@@ -60,4 +74,22 @@ namespace mc::server
         {
         }
 
+    GameEvent::GameEvent(GameEvent::Event event, float value)
+        : m_event(event),
+        m_value(value),
+        Packet((int)PlayPacketID::GameEvent)
+    {
+    }
+
+    SynchronisePlayerPosition::SynchronisePlayerPosition(double x, double y, double z, float yaw, float pitch, std::uint8_t relativeMask)
+        : Packet((int)PlayPacketID::SynchronisePlayerPosition),
+        m_x(x),
+        m_y(y),
+        m_z(z),
+        m_yaw(yaw),
+        m_pitch(pitch),
+        m_relativeMask(relativeMask),
+        m_teleportID(123)
+    {
+    }
 } // namespace mc::server

@@ -26,8 +26,9 @@ namespace mc
         template<util::PacketID T>
         typename std::remove_const<T>::type GetId()const;
 
-        virtual std::string AsString()const; 
+        virtual std::string AsString()const;
         virtual constexpr std::string PacketName()const;
+        virtual size_t Size()const;
     protected:
         int m_id;
     };
@@ -48,6 +49,10 @@ namespace mc
         return "Packet";
     }
 
+    inline size_t Packet::Size()const
+    {
+        return sizeof(int);
+    }
 }
 
 //FMT FORMATTERS

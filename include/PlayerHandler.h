@@ -135,7 +135,7 @@ namespace mc
                     return std::make_unique<AcknowledgeConfig>();
                 default:
                     //maybe needs to throw
-                    m_logger.warn("Invalid status packetID: {:0x}", packetID);
+                    m_logger.warn("Invalid config packetID: {:0x}", packetID);
                     return nullptr; 
             }
         }

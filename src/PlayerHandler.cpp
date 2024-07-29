@@ -26,7 +26,7 @@ namespace mc
     {
         auto packetsIter = packets.begin();
         Packet::PacketPtr packet;
-        
+
         while(true)
         {
             switch(m_state)
@@ -142,20 +142,14 @@ namespace mc
             case client::LoginPacketID::LoginAcknowledged:
             {
                 m_logger.debug("Login Acknowledged");
-                m_logger.info("Switching to config state");
+                m_logger.info("Starting configuration");
                 m_state = PlayerHandlerState::CONFIG;
-                //std::vector<std::uint8_t> out{0x07};
-                //iu::Serializer<Identifier>().Serialize(out, Identifier("lol"));
-                //util::writeVarInt(out, 0);
-                //util::writeVarInt(out, 0, out.size());
-                //m_client.Send(out);
-                
                 m_client.Send(m_context.registry_packets[0]);
                 m_client.Send(m_context.registry_packets[1]);
                 m_client.Send(m_context.registry_packets[2]);
                 m_client.Send(m_context.registry_packets[3]);
                 m_client.Send(m_context.registry_packets[4]);
-                m_client.Send(std::vector<std::uint8_t>{0x01,0x03});
+                m_client.Send(server::FinishConfiguration());
                 break;
             }
             default:
@@ -173,18 +167,10 @@ namespace mc
                 m_logger.info("ConfigAcknowledged switching to play state");
                 m_state = PlayerHandlerState::PLAY;
                 m_client.Send(server::LoginPlayPacket());
-                m_client.Send(std::vector<std::uint8_t>{0x06, 0x22, 13, 0x00, 0x00, 0x00, 0x00});
-                std::vector<std::uint8_t> out;
-                out.push_back(0x40);
-                util::DoubleSerializer().Serialize(out, -100);
-                util::DoubleSerializer().Serialize(out, -100);
-                util::DoubleSerializer().Serialize(out, -100);
-                util::FloatSerializer().Serialize(out, 100);
-                util::FloatSerializer().Serialize(out, 50);
-                util::ByteSerializer().Serialize(out, 0);
-                util::writeVarInt(out, 1234);
-                util::writeVarInt(out, 0, out.size());
-                m_client.Send(out);
+                m_client.Send(server::GameEvent(server::GameEvent::Event::StartWaitingForChunks, 0));
+                m_client.Send(
+                    server::SynchronisePlayerPosition(-100, -100 , -100, 100, 50)
+                );
                 break;
             }
             default:

@@ -28,7 +28,7 @@ namespace mc
         {
             UNKNOWN = -1,
             START   = 0,
-            LoginAcknowledged = 0x03
+            LoginAcknowledged = 0x02
 
         };
 

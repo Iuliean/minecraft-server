@@ -49,7 +49,7 @@ namespace mc
                 ss << std::hex << (int)data[i] << ", ";
             }
 
-            m_logger.debug("{}",ss.str());
+            //m_logger.debug("{}",ss.str());
             ss.clear();
             ss.str("");
             if (recv == 0 )
@@ -92,7 +92,7 @@ namespace mc
                 util::writeStringToBuff(packet, value["name"].get<NBT::String>());
                 util::ByteSerializer().Serialize(packet, 0);
 
-                /*NBT::NBT data("");
+                NBT::NBT data("");
 
                 data->Insert("asset_id", value["element"]["asset_id"].get<NBT::String>());
                 data->Insert("template_item", value["element"]["template_item"].get<NBT::String>());
@@ -103,8 +103,6 @@ namespace mc
                 data->Insert("decal", value["element"]["decal"].get<NBT::Byte>());
                 //Intermediate is a temporary solution since network NBT has name bytes removed from root nbt
                 removeNameBytesFromRootNBT(packet, data);
-                */
-
             }
             util::writeVarInt(packet, 0, 0x07);
             util::writeVarInt(packet, 0, packet.size());
