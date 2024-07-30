@@ -24,7 +24,7 @@ namespace mc::server
     StatusPacket::StatusPacket() : Packet(StatusPacketID::STATUS)
     {
         // FORMATED
-        m_payload = { { "version", { { "name", "1.20.4" }, { "protocol", 767 } } },
+        m_payload = { { "version", { { "name", "1.20.6" }, { "protocol", 766 } } },
             { "players",
                 { { "max", 10 },
                     { "online", 0 },
