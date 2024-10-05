@@ -133,6 +133,9 @@ namespace mc::NBT
     class NBTNamedTag : public NBTTag
     {
     public:
+
+        NBTNamedTag() = default;
+
         NBTNamedTag(const std::string& name) : NBTTag(getTagType<T>()), m_payload(), m_name(name) {}
 
         NBTNamedTag(const std::string& name, const T& object)
@@ -186,6 +189,8 @@ namespace mc::NBT
 
         inline T* operator->() noexcept { return &m_payload; }
 
+        inline const T* operator->() const noexcept { return &m_payload; }
+
     private:
         T m_payload;
         std::string m_name;
@@ -229,6 +234,10 @@ namespace mc::NBT
         inline operator T&() noexcept { return m_payload; }
 
         inline operator const T&() const noexcept { return m_payload; }
+
+        inline T* operator->() noexcept { return &m_payload; }
+
+        inline const T* operator->() const noexcept { return &m_payload; }
 
     private:
         T m_payload;
@@ -404,7 +413,7 @@ namespace mc::NBT
             }
 
             template<CanConstructNBTTag T>
-            NBTUnnamedTag<T>& get() const
+            NBTUnnamedTag<T>* operator*() const
             {
                 ASSERT((*m_it)->Type() == getTagType<T>(),
                     "Requested type differs from actual type");
@@ -481,7 +490,7 @@ namespace mc::NBT
             {
                 ASSERT((*m_it)->Type() == getTagType<T>(),
                     "Requested type differs from actual type");
-                return *(*m_it).get();
+                return *(dynamic_cast<NBTUnnamedTag<T>*>(m_it->get()));
             }
 
         private:
@@ -707,7 +716,7 @@ struct std::formatter<mc::NBT::NBTCompound> : public std::formatter<std::string>
     template<mc::NBT::CanConstructNBTTag T>
     struct iu::Serializer<mc::NBT::NBTUnnamedTag<T>>
     {
-        void Serialize(std::vector<uint8_t>& buffer, const mc::NBT::NBTUnnamedTag<T>& object)
+        inline void Serialize(std::vector<uint8_t>& buffer, const mc::NBT::NBTUnnamedTag<T>& object)
         {
             object.Serialize(buffer);
         }
@@ -716,10 +725,32 @@ struct std::formatter<mc::NBT::NBTCompound> : public std::formatter<std::string>
     template<mc::NBT::CanConstructNBTTag T>
     struct iu::Serializer<mc::NBT::NBTNamedTag<T>>
     {
-        void Serialize(std::vector<uint8_t>& buffer, const mc::NBT::NBTNamedTag<T>& object)
+        inline void Serialize(std::vector<uint8_t>& buffer, const mc::NBT::NBTNamedTag<T>& object)
         {
             object.Serialize(buffer);
         }
+    };
+
+    template<>
+    struct iu::Serializer<mc::NBT::NamedCompound>
+    {
+        constexpr Serializer(bool isRootCompound = false) : m_isRootCompound(isRootCompound){}
+
+        inline void Serialize(std::vector<uint8_t>& buffer, const mc::NBT::NamedCompound& object)
+        {
+            if (m_isRootCompound)
+            {
+                mc::util::writeVarInt(buffer, (int)mc::NBT::TagType::COMPOUND);
+                Serializer<mc::NBT::NBTCompound>().Serialize(buffer, object.Get());
+            }
+            else
+            {
+                object.Serialize(buffer);
+            }
+        }
+
+    private:
+        bool m_isRootCompound;
     };
 
 #endif // NBT_H

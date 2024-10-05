@@ -2,14 +2,20 @@
 #include <SFW/Logger.h>
 #include <SFW/LoggerManager.h>
 #include <cstdint>
+#include "BlockState.h"
+#include "DataTypes/Identifier.h"
 #include "MinecraftHandler.h"
 #include "DataTypes/nbt.h"
 #include <fstream>
+#include <unordered_map>
+#include "Registry.h"
 #include "zstr.hpp"
 int main()
 {
     iu::LoggerManager::Init();
+    mc::BlockStateRegistry::Init("blocks.json");
     iu::LoggerManager::SetLevel(iu::LogLevel::DEBUG);
+
 
 #if 1
     iu::AggregateServer<mc::MinecraftHanlder> server("0.0.0.0", 25565);
@@ -25,45 +31,13 @@ int main()
 
 #else 
     auto& log = iu::LoggerManager::GlobalLogger();
-    std::ifstream data("r.0.0.mca");
+    mc::BlockState s(mc::Identifier("acacia_button"));
+    s.AddProperty("face", "floor");
+    s.AddProperty("facing", "north");
+    s.AddProperty("powered", "true");
+    std::cout << mc::BlockStateRegistry::Instance().GetBlockStateId(s).value() << '\n' ;
 
-    size_t offset = 4 * ((1 & 31) + (1 & 31) * 32);
-    data.seekg(offset);
-    unsigned char location[4];
-    data.read((char*)&location, 4);
-
-    int oset = 0;
-    oset |= location[0];
-    oset <<= 8;
-    oset |= location[1];
-    oset <<= 8;
-    oset |= location[2];
-    log.info("{:x} {:x} {:x} {:x}",location[0],location[1],location[2],location[3]);
-    log.info("{}",oset);
-
-    data.seekg((oset * 4096)+1, data.beg);
-    log.info("{:x}", (int)data.tellg());
-    char lenght [4];
-    char comp_Type = 0;
-    data.get((char*)&lenght,4);
-    data.get(comp_Type);
-    log.info("{:x}", (int)data.tellg());
-
-    int len = 0;
-    len |= lenght[0];
-    len <<= 8;
-    len |= lenght[1];
-    len <<= 8;
-    len |= lenght[2];
-    len <<= 8;
-    len |= lenght[3];
-    //std::vector<std::uint8_t> chunk_info(len);
-    //data.read((char*)chunk_info.data(), len-1);
-    zstr::istreambuf lol(data.rdbuf(), 1 << 16, true);
-    std::istream decompressed(&lol);
-    auto nbt = mc::NBT::parse(decompressed);
-
-    log.info("{} {}", nbt->Contains("Heightmaps"), nbt->Get<mc::NBT::String>("Status"));
 #endif
+    mc::BlockStateRegistry::Deinit();
     return 0;
 }

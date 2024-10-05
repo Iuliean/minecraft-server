@@ -12,7 +12,7 @@ namespace mc
 
             util::toLower(m_value);
             util::toLower(m_category);
-
+            //This regex shit needs to be redone it does not work :)
             if (!std::regex_match(m_value, s_allowedValueCharacters))
                 throw std::runtime_error("Value does not respect character restrictions");
             if (!std::regex_match(m_category, s_allowedNamespaceCharacters))

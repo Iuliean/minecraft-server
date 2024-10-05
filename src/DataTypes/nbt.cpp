@@ -1,11 +1,6 @@
 #include "DataTypes/nbt.h"
-#include "SFW/LoggerManager.h"
 #include "utils.h"
-#include <format>
-#include <fstream>
 #include <istream>
-#include <iterator>
-#include <ostream>
 #include <stdexcept>
 #include <string>
 namespace mc::NBT
@@ -111,8 +106,8 @@ namespace mc::NBT
     TagType parseTagType(std::istream& data)
     {
         char tag = (char)TagType::UNKNOWN;
-        data.get(tag);
-        return (TagType)tag;
+        data.read(&tag, 1);
+        return tag < -2 || tag >> 12 ? TagType::UNKNOWN : (TagType)tag;
     }
 
     template<mc::util::Numeric T>

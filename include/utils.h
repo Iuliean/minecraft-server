@@ -13,6 +13,7 @@
 #include <spdlog/fmt/fmt.h>
 #include <stdexcept>
 #include <ranges>
+#include <map>
 #include <string_view>
 #include <iterator>
 #include <vector>
@@ -135,6 +136,17 @@ namespace mc
         void writeStringToBuff(std::vector<uint8_t>& buffer, std::string_view str);
 
         void toLower(std::string& s);
+
+        
+        template<std::integral T>
+        constexpr T byteswap(T value) noexcept
+        {
+            static_assert(std::has_unique_object_representations_v<T>, 
+                          "T may not have padding bits");
+            auto value_representation = std::bit_cast<std::array<std::byte, sizeof(T)>>(value);
+            std::ranges::reverse(value_representation);
+            return std::bit_cast<T>(value_representation);
+        }
     } // namespace util
 
 } // namespace mc
@@ -175,11 +187,47 @@ struct std::formatter<nlohmann::json> : public std::formatter<std::string>
     }
 };
 
-template<std::ranges::input_range T>
-struct std::formatter<T> : public std::formatter<std::string>
+template<typename ...Args>
+struct std::formatter<std::variant<Args...>> : public std::formatter<std::string>
 {
     template<typename FmtContext>
-    FmtContext::iterator format(const T& my, FmtContext& ctx) const
+    FmtContext::iterator format(const std::variant<Args...>& my, FmtContext& ctx) const
+    {
+        std::visit([&ctx](auto&& arg) 
+        { std::format_to(ctx.out(), "{}", arg); }
+        , my);
+
+        return ctx.out();
+    }
+};
+
+template<typename T, typename R>
+struct std::formatter<std::pair<T,R>> : public std::formatter<std::string>
+{
+    template<typename FmtContext>
+    FmtContext::iterator format(const std::pair<T,R>& my, FmtContext& ctx) const
+    {
+        return std::format_to(ctx.out(), "{}:{}", my.first, my.second);
+    }
+};
+
+template<typename T>
+struct std::formatter<std::vector<T>> : public std::formatter<std::string>
+{
+    template<typename FmtContext>
+    FmtContext::iterator format(const std::vector<T>& my, FmtContext& ctx) const
+    {
+        for (const auto& el : my)
+            std::format_to(ctx.out(), "{}, ", el);
+        return ctx.out();
+    }
+};
+
+template<typename T, typename R>
+struct std::formatter<std::map<T, R>> : public std::formatter<std::string>
+{
+    template<typename FmtContext>
+    FmtContext::iterator format(const std::map<T, R>& my, FmtContext& ctx) const
     {
         for (const auto& el : my)
             std::format_to(ctx.out(), "{}, ", el);
@@ -189,7 +237,6 @@ struct std::formatter<T> : public std::formatter<std::string>
 
 
 // SERIALIZERS
-
 template<iu::Serializable S>
 struct iu::Serializer<std::vector<S>>
 {

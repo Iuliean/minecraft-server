@@ -2,6 +2,7 @@
 #include <SFW/Connection.h>
 #include <algorithm>
 #include <bits/stdint-uintn.h>
+#include <filesystem>
 #include <string>
 #include <sys/types.h>
 #include <fstream>
@@ -14,6 +15,7 @@
 #include "DataTypes/Identifier.h"
 #include "DataTypes/nbt.h"
 #include "utils.h"
+#include "zstr.hpp"
 
 namespace mc
 {
@@ -21,6 +23,46 @@ namespace mc
     namespace 
     {
         constexpr static int PACKET_SIZE = 1024;
+        //Temporary hopefully
+        ChunkRegion loadChunkRegion(std::filesystem::path path)
+        {
+            ChunkRegion out;
+            std::ifstream data(path);
+
+            for (int x = 0; x < 32; ++x)
+            {
+                for (int y = 0; y < 32; ++y)
+                {
+                    //This can be done better
+                    //Instead of recomputing the offset of the chunk everytime
+                    //Just go forwards untill next 4096 multiple
+                    //The chunks are 4096 bytes padded
+                    //MAYBE
+
+                    size_t chunkLocationOffset = 4 * ((x & 31) + (y & 31) * 32);
+                    data.seekg(chunkLocationOffset);
+
+                    char chunkLocation[4] = {0,0,0,0};
+                    int chunkOffset;
+                    data.read((char*)&chunkOffset, 3);
+                    data.read(chunkLocation, 1);
+                    chunkOffset = (util::byteswap(chunkOffset) >> 8) * 4096 ;
+
+                    int sectorCount = chunkLocation[0];
+                    data.seekg(chunkOffset, data.beg);
+
+                    char lengthAndCompression[5];
+                    data.read(lengthAndCompression, 5);
+                    
+                    zstr::istreambuf decompressionBuffer(data.rdbuf());
+                    std::istream decompressedStream(&decompressionBuffer);
+
+                    out[x][y] = NBT::parse(decompressedStream);
+                }
+            }
+
+            return out;
+        }
     }
 
     MinecraftHanlder::MinecraftHanlder()
@@ -28,6 +70,7 @@ namespace mc
         m_stop(false)
     {
         BuildRegistryPackets();
+        m_context.chunk_region = loadChunkRegion("r.0.0.mca");
     }
 
     void MinecraftHanlder::OnConnected(iu::Connection& connection)

@@ -3,6 +3,7 @@ add_executable(${PROJECT_NAME}
     MinecraftHandler.cpp
     PlayerHandler.cpp
     ServerPackets.cpp
+    Registry.cpp
     utils.cpp
     DataTypes/Identifier.cpp
     DataTypes/nbt.cpp)

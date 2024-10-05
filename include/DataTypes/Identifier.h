@@ -10,6 +10,7 @@ namespace mc
     class Identifier
     {
     public:
+        Identifier() = default;
         Identifier(const std::string& category, const std::string& value);
 
         Identifier(const std::string& value);
@@ -18,7 +19,11 @@ namespace mc
         {
             return m_category + ':' + m_value;
         }
+        
 
+        bool Equal(const Identifier& other)const { return m_category == other.m_category && m_value == other.m_value; }
+        bool operator==(const Identifier& other)const { return Equal(other); }
+        bool operator!=(const Identifier& other)const { return !Equal(other); }
     private:
         static std::regex s_allowedNamespaceCharacters;
         static std::regex s_allowedValueCharacters;
@@ -31,9 +36,9 @@ template<>
 struct std::formatter<mc::Identifier> : public std::formatter<std::string>
 {
     template<typename FmtContext>
-    FmtContext::iterator format(const mc::Identifier& my, format_context &ctx) const
+    FmtContext::iterator format(const mc::Identifier& my, FmtContext &ctx) const
     {
-        return std::format_to(ctx.out(), "{}", my.AsString());
+        return std::formatter<std::string>::format(my.AsString(), ctx);
     }
 };
 
