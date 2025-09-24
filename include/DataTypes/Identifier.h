@@ -46,8 +46,9 @@ template<>
 struct iu::Serializer<mc::Identifier>
 {
     void Serialize(std::vector<uint8_t>& buffer, const mc::Identifier& toSerialize)
-    {   
-        mc::util::writeStringToBuff(buffer, toSerialize.AsString());
+    {
+        const std::string identifier = toSerialize.AsString();
+        mc::util::writeStringToBuff(buffer, {identifier.c_str(), identifier.size()});
     }
 };
 #endif

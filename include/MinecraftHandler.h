@@ -22,7 +22,6 @@ namespace mc
     private:
         void BuildRegistryPackets();
     private:
-        iu::Logger m_logger;
 
         ServerContext m_context;
         std::atomic_bool m_stop;

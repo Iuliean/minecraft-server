@@ -2,7 +2,6 @@
 #define UTILS_H
 
 #include <SFW/Serializer.h>
-#include <SFW/Logger.h>
 #include <SFW/LoggerManager.h>
 #include <concepts>
 #include <cstdint>
@@ -17,6 +16,7 @@
 #include <string_view>
 #include <iterator>
 #include <vector>
+#include <variant>
 #include <format>
 
 namespace mc

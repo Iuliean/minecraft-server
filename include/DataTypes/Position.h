@@ -1,7 +1,6 @@
 #ifndef POSITION_H
 #define POSITION_H
 
-#include <SFW/utils.h>
 #include <cstdint>
 
 #include "utils.h"

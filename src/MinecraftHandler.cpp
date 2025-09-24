@@ -66,8 +66,7 @@ namespace mc
     }
 
     MinecraftHanlder::MinecraftHanlder()
-        : m_logger(iu::LoggerManager::GetLogger("McHandler")),
-        m_stop(false)
+        : m_stop(false)
     {
         BuildRegistryPackets();
         m_context.chunk_region = loadChunkRegion("r.0.0.mca");
@@ -75,7 +74,7 @@ namespace mc
 
     void MinecraftHanlder::OnConnected(iu::Connection& connection)
     {
-        m_logger.info("New connection from: {}:{}", connection.GetAdress(), connection.GetPort());
+        SFW_LOG_INFO("Handler", "New connection from: {}:{}", connection.GetAdress(), connection.GetPort());
     }
 
     void MinecraftHanlder::HandleConnection(iu::Connection &connection)
@@ -86,7 +85,7 @@ namespace mc
         std::stringstream ss;
         while(!m_stop)
         {
-            size_t recv = connection.Receive(data, PACKET_SIZE);
+            size_t recv = connection.Receive(data);
             for(size_t i = 0; i < recv; ++i)
             {
                 ss << std::hex << (int)data[i] << ", ";

@@ -22,8 +22,7 @@ namespace mc
     PlayerHandler::PlayerHandler(iu::Connection& client, const ServerContext& context)
         : m_client(client),
         m_state(PlayerHandlerState::IDLE),
-        m_context(context),
-        m_logger(iu::LoggerManager::GetLogger("PlayerHandler"))
+        m_context(context)
     { 
     }
 
@@ -67,7 +66,7 @@ namespace mc
                     OnPlay(std::move(packet));
                     break;
                 default:
-                    m_logger.warn("State is unknown");
+                    SFW_LOG_WARN("PlayerHandler", "State is unknown");
                     return;
             }
         }
@@ -81,25 +80,25 @@ namespace mc
             case client::IdlePacketID::HANDSHAKE:
             {
                 mc::client::HandshakePacket* packet = (mc::client::HandshakePacket*)genericPacket.get();  
-                m_logger.debug("{}", *packet);
+                SFW_LOG_DEBUG("PlayerHandler", "{}", *packet);
                 switch (packet->GetNextState())
                 {
                     case 2:
-                        m_logger.info("Login request");
+                        SFW_LOG_INFO("PlayerHandler", "Login request");
                         m_state = PlayerHandlerState::LOGIN;
                         break;
                     case 1:
-                        m_logger.info("Status request");
+                        SFW_LOG_INFO("PlayerHandler", "Status request");
                         m_state = PlayerHandlerState::STATUS;
                         break;
                     default:
-                        m_logger.warn("Unknown next state {}", packet->GetNextState());
-                        break;    
+                        SFW_LOG_WARN("PlayerHandler", "Unknown next state {}", packet->GetNextState());
+                        break;
                 }
                 break;
             }
             default:
-                m_logger.warn("Unknown packet ID: {}", genericPacket->GetId<int>());
+                SFW_LOG_WARN("PlayerHandler", "Unknown packet ID: {}", genericPacket->GetId<int>());
                 break;
         }
     }
@@ -111,23 +110,23 @@ namespace mc
             case client::StatusPacketID::STATUS:
             {
                 m_client.Send(m_statusMessage);
-                m_logger.debug("Status request sent");
+                SFW_LOG_DEBUG("PlayerHandler", "Status request sent");
                 break;
             }
             case client::StatusPacketID::PING:
             {
                 client::PingRequest* packet = (client::PingRequest*)genericPacket.get();
-                m_logger.debug("Ping request: {}", *packet);
+                SFW_LOG_DEBUG("PlayerHandler", "Ping request: {}", *packet);
                 std::vector<uint8_t> send;
                 util::writeVarInt(send, 1);
                 send.resize(9);
                 *(send.data() + 1) = packet->GetPayload();
                 util::writeVarInt(send, 0, send.size());
-                m_client.SendAll(send);
+                m_client.Send(send);
                 break;
             }
             default:
-                m_logger.warn("Unknown packet ID: {}", genericPacket->GetId<int>());
+                SFW_LOG_WARN("PlayerHandler", "Unknown packet ID: {}", genericPacket->GetId<int>());
                 break;
         }
     }
@@ -139,15 +138,15 @@ namespace mc
             case client::LoginPacketID::START:
             {
                 client::LoginStartPacket* packet = (client::LoginStartPacket*) genericPacket.get();
-                m_logger.debug("{}", *packet);
+                SFW_LOG_DEBUG("PlayerHandler", "{}", *packet);
                 server::LoginSuccessPacket out(*packet);
                 m_client.Send(out);
                 break;
             }
             case client::LoginPacketID::LoginAcknowledged:
             {
-                m_logger.debug("Login Acknowledged");
-                m_logger.info("Starting configuration");
+                SFW_LOG_INFO("PlayerHandler", "Login Acknowledged");
+                SFW_LOG_INFO("PlayerHandler", "Starting configuration");
                 m_state = PlayerHandlerState::CONFIG;
                 m_client.Send(m_context.registry_packets[0]);
                 m_client.Send(m_context.registry_packets[1]);
@@ -158,7 +157,7 @@ namespace mc
                 break;
             }
             default:
-                m_logger.warn("Unknown packet ID: {}", genericPacket->GetId<int>());
+                SFW_LOG_WARN("PlayerHandler", "Unknown packet ID: {}", genericPacket->GetId<int>());
                 break;
         }
     }
@@ -169,7 +168,7 @@ namespace mc
         {
             case client::ConfigPacketID::AcknowledgeConfigEnd :
             {
-                m_logger.info("ConfigAcknowledged switching to play state");
+                SFW_LOG_INFO("PlayerHandler", "ConfigAcknowledged switching to play state");
                 m_state = PlayerHandlerState::PLAY;
                 m_client.Send(server::LoginPlayPacket());
                 m_client.Send(server::GameEvent(server::GameEvent::Event::StartWaitingForChunks, 0));
@@ -183,7 +182,7 @@ namespace mc
                 out.push_back(0x27);
                 util::IntSerializer().Serialize(out, chunk->Get<NBT::Int>("xPos"));
                 util::IntSerializer().Serialize(out, chunk->Get<NBT::Int>("zPos"));
-                m_logger.info("{} {}", chunk->Get<NBT::Int>("xPos"), chunk->Get<NBT::Int>("zPos"));
+                SFW_LOG_INFO("PlayerHandler", "{} {}", chunk->Get<NBT::Int>("xPos"), chunk->Get<NBT::Int>("zPos"));
                 NBT::NBTSerializer(true).Serialize(out, chunk->Get<NBT::NBTCompound>("Heightmaps"));
                 const auto& sections = chunk->Get<NBT::NBTList>("sections");
 
@@ -199,7 +198,7 @@ namespace mc
                     std::vector<long> block_data_array(1024 , coarse_dirt);
                     std::vector<long> biomes_data_array(7, biome);
  
-                    
+
                     util::writeVarInt(chunk_data, block_data_array.size());
                     iu::Serializer<std::vector<long>>().Serialize(chunk_data, block_data_array);
                     util::ByteSerializer().Serialize(chunk_data, 6);
@@ -216,15 +215,15 @@ namespace mc
                 BitSetSerializer().Serialize(out, BitSet(1));
                 util::writeVarInt(out, 0);
                 util::writeVarInt(out, 0);
-                
+
                 util::writeVarInt(out, 0 , out.size());
-                m_logger.info("{:x} {:x} {}", out[0], out[1], out.size());
+                SFW_LOG_INFO("PlayerHandler", "{:x} {:x} {}", out[0], out[1], out.size());
                 m_client.Send(out);
                 break;
             }
             default:
             {
-                m_logger.warn("Unknown packet ID: {}", genericPacket->GetId<int>());
+                SFW_LOG_WARN("PlayerHandler", "Unknown packet ID: {}", genericPacket->GetId<int>());
                 break;
             }
         }
@@ -236,7 +235,7 @@ namespace mc
         {
 
             default:
-                m_logger.warn("Unknown packet ID:{}", genericPacket->GetId<int>());
+                SFW_LOG_WARN("PlayerHandler", "Unknown packet ID:{}", genericPacket->GetId<int>());
                 break;
         }
     }

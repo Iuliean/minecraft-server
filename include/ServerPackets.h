@@ -6,9 +6,7 @@
 #include "DataTypes/nbt.h"
 #include "Packet.h"
 #include "DataTypes/Position.h"
-#include <SFW/Serializer.h>
 #include <nlohmann/json.hpp>
-#include "SFW/LoggerManager.h"
 #include "utils.h"
 
 #include <cstdint>

@@ -58,7 +58,7 @@ namespace std
 #else
             std::string hashedString = std::format("{}[{}]",blockState.GetID(), blockState.GetProperties());
             std::uint64_t hash = std::hash<std::string>()(hashedString);
-            iu::LoggerManager::GlobalLogger().debug("{} -> {}", hashedString, hash);
+            SFW_LOG_DEBUG("BlockState", "{} -> {}", hashedString, hash);
             return hash; 
 #endif
         }

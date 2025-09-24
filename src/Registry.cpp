@@ -71,7 +71,7 @@ namespace mc
                     }
                     else
                     {
-                        iu::LoggerManager::GlobalLogger().warn("Failed to parse property {} unsuppoerted type", propertyName);
+                        SFW_LOG_WARN("BlockRegistry", "Failed to parse property {} unsuppoerted type", propertyName);
                     }
                 }
 
@@ -86,8 +86,7 @@ namespace mc
     //  ######################
 
     BlockStateRegistry::BlockStateRegistry()
-        : m_logger(iu::LoggerManager::GetLogger("BlockStateRegistry")),
-        m_stateToIdMap(),
+        : m_stateToIdMap(),
         m_idToBlockState()
     {}
 

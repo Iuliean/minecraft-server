@@ -1,7 +1,6 @@
 #ifndef NBT_H
 #define NBT_H
 
-#include <SFW/Serializer.h>
 #include <concepts>
 #include <cstring>
 #include <filesystem>

@@ -9,11 +9,6 @@ FetchContent_Declare(ZStrGitRepo
 )
 FetchContent_MakeAvailable(ZStrGitRepo)
 
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/out/$<CONFIG>/)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/out/$<CONFIG>/)
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-
 add_subdirectory(dependencies/SFW)
 add_subdirectory(dependencies/nlohmann-json)
 

@@ -1,22 +1,13 @@
 #include <SFW/Server.h>
-#include <SFW/Logger.h>
 #include <SFW/LoggerManager.h>
-#include <cstdint>
-#include "BlockState.h"
-#include "DataTypes/Identifier.h"
-#include "MinecraftHandler.h"
-#include "DataTypes/nbt.h"
-#include <fstream>
-#include <unordered_map>
+
 #include "Registry.h"
-#include "zstr.hpp"
+#include "MinecraftHandler.h"
+
 int main()
 {
-    iu::LoggerManager::Init();
+    iu::LoggerManager::LogToConsole();
     mc::BlockStateRegistry::Init("blocks.json");
-    iu::LoggerManager::SetLevel(iu::LogLevel::DEBUG);
-
-
 #if 1
     iu::AggregateServer<mc::MinecraftHanlder> server("0.0.0.0", 25565);
     std::thread serverThread([&server](){
@@ -30,12 +21,12 @@ int main()
     serverThread.join();
 
 #else 
-    auto& log = iu::LoggerManager::GlobalLogger();
-    mc::BlockState s(mc::Identifier("acacia_button"));
-    s.AddProperty("face", "floor");
-    s.AddProperty("facing", "north");
-    s.AddProperty("powered", "true");
-    std::cout << mc::BlockStateRegistry::Instance().GetBlockStateId(s).value() << '\n' ;
+
+    //iu::AggregateServer<Test> server("0.0.0.0", 2222);
+    //std::jthread s([&server](){ server.Run();});
+
+    std::vector<uint8_t> lol;
+    ByteSerializer().Serialize(lol, 12);
 
 #endif
     mc::BlockStateRegistry::Deinit();

@@ -1,6 +1,5 @@
 #ifndef BIT_SET_H
 #define BIT_SET_H
-#include "SFW/Serializer.h"
 #include "utils.h"
 #include <cstdint>
 #include <vector>

@@ -2,7 +2,6 @@
 #define REGITSTRY_H
 
 #include "BlockState.h"
-#include "SFW/Logger.h"
 #include "SFW/utils.h"
 #include <filesystem>
 #include <memory>
@@ -16,11 +15,11 @@ namespace mc
     class BlockStateRegistry
     {
     public:
-    
+
         ~BlockStateRegistry()= default;
-        
+
         void MapState(BlockState state, int stateId);
-        
+
         std::optional<int> GetBlockStateId(const BlockState& state)const;
         std::optional<BlockState> GetBlockState(int id)const;
 
@@ -33,8 +32,7 @@ namespace mc
         }
     private:
         BlockStateRegistry();
-        
-        iu::Logger m_logger;
+
         std::unordered_map<BlockState, int> m_stateToIdMap;
         std::unordered_map<int, BlockState> m_idToBlockState;
 

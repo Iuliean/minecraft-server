@@ -4,10 +4,10 @@
 #include <spdlog/spdlog.h>
 #include <nlohmann/json.hpp>
 #include <SFW/Connection.h>
-#include <SFW/Logger.h>
 
 #include "Packet.h"
 #include "ClientPackets.h"
+#include "SFW/LoggerManager.h"
 #include "ServerContext.h"
 #include "ServerPackets.h"
 #include "utils.h"
@@ -63,7 +63,7 @@ namespace mc
                     return std::make_unique<HandshakePacket>(dataIter);
                 default:
                     //maybe needs to throw
-                    m_logger.warn("Invalid idle packetID: {:0x}", packetID);
+                    SFW_LOG_WARN("PlayerHandler", "Invalid idle packetID: {:0x}", packetID);
                     return nullptr;
             }
         }
@@ -87,7 +87,7 @@ namespace mc
                     return std::make_unique<PingRequest>(dataIter);
                 default:
                     //maybe needs to throw
-                    m_logger.warn("Invalid status packetID: {:0x}", packetID);
+                        SFW_LOG_WARN("PlayerHandler", "Invalid status packetID: {:0x}", packetID);
                     return nullptr; 
             }
         }
@@ -112,7 +112,7 @@ namespace mc
                     return std::make_unique<LoginAckPacket>();
                 default:
                     //maybe needs to throw
-                    m_logger.warn("Invalid status packetID: {:0x}", packetID);
+                    SFW_LOG_WARN("PlayerHandler", "Invalid login packetID: {:0x}", packetID);
                     return nullptr; 
             }
         }
@@ -135,7 +135,7 @@ namespace mc
                     return std::make_unique<AcknowledgeConfig>();
                 default:
                     //maybe needs to throw
-                    m_logger.warn("Invalid config packetID: {:0x}", packetID);
+                    SFW_LOG_WARN("PlayerHandler", "Invalid config packetID: {:0x}", packetID);
                     return nullptr; 
             }
         }
@@ -156,7 +156,7 @@ namespace mc
             {
 
                 default:
-                    m_logger.warn("Invalid play packetID: {:0x}", packetID);
+                    SFW_LOG_WARN("PlayerHandler", "Invalid play packetID: {:0x}", packetID);
                     return nullptr;
             }
         }
@@ -164,7 +164,6 @@ namespace mc
         iu::Connection& m_client;
         PlayerHandlerState m_state;
         const ServerContext& m_context;
-        iu::Logger m_logger;
         server::StatusPacket m_statusMessage;
     };
 }
