@@ -183,54 +183,7 @@ namespace mc
                 m_state = PlayerHandlerState::PLAY;
                 m_client.Send(server::LoginPlayPacket());
                 m_client.Send(server::GameEvent(server::GameEvent::Event::StartWaitingForChunks, 0));
-                m_client.Send(
-                    server::SynchronisePlayerPosition(-100, -100 , -100, 100, 50)
-                );
 
-                std::vector<uint8_t> out;
-                std::vector<uint8_t> chunk_data;
-                const NBT::NBT& chunk = m_context.chunk_region[0][0];
-                out.push_back(0x27);
-                util::IntSerializer().Serialize(out, chunk->Get<NBT::Int>("xPos"));
-                util::IntSerializer().Serialize(out, chunk->Get<NBT::Int>("zPos"));
-                SFW_LOG_INFO("PlayerHandler", "{} {}", chunk->Get<NBT::Int>("xPos"), chunk->Get<NBT::Int>("zPos"));
-                NBT::NBTSerializer(true).Serialize(out, chunk->Get<NBT::NBTCompound>("Heightmaps"));
-                const auto& sections = chunk->Get<NBT::NBTList>("sections");
-
-                for (auto it = sections->begin(); it != sections->end(); it++)
-                {
-                    [[maybe_unused]]
-                    const auto& section = it.get<NBT::NBTCompound>();
-                    util::ShortSerializer().Serialize(chunk_data, 23);
-
-                    util::ByteSerializer().Serialize(chunk_data, 15);
-                    const long coarse_dirt = 0b0000000000000001011000000000001011000000000001011000000000001011;
-                    const long biome = 0b0000000001000001000001000001000001000001000001000001000001000001;
-
-                    std::vector<long> block_data_array(1024 , coarse_dirt);
-                    std::vector<long> biomes_data_array(7, biome);
- 
-
-                    util::writeVarInt(chunk_data, block_data_array.size());
-                    iu::Serializer<std::vector<long>>().Serialize(chunk_data, block_data_array);
-                    util::ByteSerializer().Serialize(chunk_data, 6);
-                    util::writeVarInt(chunk_data, biomes_data_array.size());
-                    iu::Serializer<std::vector<long>>().Serialize(chunk_data, biomes_data_array);
-
-                }
-                util::writeVarInt(out, chunk_data.size());
-                out.insert(out.end(), chunk_data.begin(), chunk_data.end());
-                util::writeVarInt(out, 0);
-                BitSetSerializer().Serialize(out, BitSet(1));
-                BitSetSerializer().Serialize(out, BitSet(1));
-                BitSetSerializer().Serialize(out, BitSet(1));
-                BitSetSerializer().Serialize(out, BitSet(1));
-                util::writeVarInt(out, 0);
-                util::writeVarInt(out, 0);
-
-                util::writeVarInt(out, 0 , out.size());
-                SFW_LOG_INFO("PlayerHandler", "{:x} {:x} {}", out[0], out[1], out.size());
-                m_client.Send(out);
                 break;
             }
             default:

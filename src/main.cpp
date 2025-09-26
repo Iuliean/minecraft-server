@@ -8,7 +8,7 @@ int main()
 {
     iu::LoggerManager::LogToConsole();
     iu::LoggerManager::LogFile("lastrun.log");
-    mc::BlockStateRegistry::Init("blocks.json");
+    mc::BlockStateRegistry::Init("registries/blocks.json");
 #if 1
     iu::AggregateServer<mc::MinecraftHanlder> server("0.0.0.0", 25565);
     std::thread serverThread([&server](){

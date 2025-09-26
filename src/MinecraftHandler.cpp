@@ -72,7 +72,7 @@ namespace mc
         : m_stop(false)
     {
         BuildRegistryPackets();
-        //m_context.chunk_region = loadChunkRegion("r.0.0.mca");
+        m_context.chunk_region = loadChunkRegion("r.0.0.mca");
     }
 
     void MinecraftHanlder::OnConnected(iu::Connection& connection)
