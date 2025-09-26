@@ -254,7 +254,8 @@ struct iu::Serializer<T>
     void Serialize(std::vector<uint8_t>& buffer, T toSerialize)
     {
         uint8_t* data = reinterpret_cast<uint8_t*>(&toSerialize);
-        for(size_t i = sizeof(toSerialize) - 1; i != -1; --i)
+        constexpr size_t container_end = -1;
+        for(size_t i = sizeof(toSerialize) - 1; i != container_end; --i)
         {
             buffer.push_back(data[i]);
         }

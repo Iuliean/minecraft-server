@@ -4,6 +4,7 @@
 #include "DataTypes/Identifier.h"
 #include "Packet.h"
 #include "utils.h"
+#include <utility>
 
 namespace mc::server
 {
@@ -14,8 +15,7 @@ namespace mc::server
         : Packet(LoginPacketID::SUCCESS),
           m_uuid(packet.GetUUID()),
           m_name(packet.GetPlayerName()),
-          m_numOfElements(0),
-          m_strictErrorHandling(true)
+          m_numOfElements(0)
     {
     }
     // *****************
@@ -24,7 +24,7 @@ namespace mc::server
     StatusPacket::StatusPacket() : Packet(StatusPacketID::STATUS)
     {
         // FORMATED
-        m_payload = { { "version", { { "name", "1.20.6" }, { "protocol", 766 } } },
+        m_payload = { { "version", { { "name", "1.21.8" }, { "protocol", 772 } } },
             { "players",
                 { { "max", 10 },
                     { "online", 0 },
@@ -40,6 +40,14 @@ namespace mc::server
     // *****************
     // * ConfigPackets *
     // *****************
+    KnownPacksPacket::KnownPacksPacket(std::string nspace, std::string id, std::string version)
+        : Packet(std::to_underlying(ConfigPacketID::KnownPacks)),
+          m_namespace(std::move(nspace)),
+          m_id(std::move(id)),
+          m_version(std::move(version))
+    {
+    }
+
     FinishConfiguration::FinishConfiguration()
         : Packet((int)ConfigPacketID::FinishConfiguration)
     {
@@ -70,14 +78,15 @@ namespace mc::server
         m_deathDimension(),
         m_deathPosition(),
         m_portalCooldown(1),
+        m_seaLevel(100),
         m_enforceSecureChat(false)
         {
         }
 
     GameEvent::GameEvent(GameEvent::Event event, float value)
-        : m_event(event),
-        m_value(value),
-        Packet((int)PlayPacketID::GameEvent)
+        : Packet((int)PlayPacketID::GameEvent),
+        m_event(event),
+        m_value(value)
     {
     }
 

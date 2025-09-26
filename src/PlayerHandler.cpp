@@ -2,6 +2,9 @@
 #include <SFW/LoggerManager.h>
 #include <bit>
 #include <bits/stdint-uintn.h>
+#include <chrono>
+#include <ratio>
+#include <thread>
 #include <vector>
 
 #include "BlockState.h"
@@ -140,7 +143,9 @@ namespace mc
                 client::LoginStartPacket* packet = (client::LoginStartPacket*) genericPacket.get();
                 SFW_LOG_DEBUG("PlayerHandler", "{}", *packet);
                 server::LoginSuccessPacket out(*packet);
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 m_client.Send(out);
+                SFW_LOG_DEBUG("PlayerHandler", "Success packet sent");
                 break;
             }
             case client::LoginPacketID::LoginAcknowledged:
@@ -148,12 +153,7 @@ namespace mc
                 SFW_LOG_INFO("PlayerHandler", "Login Acknowledged");
                 SFW_LOG_INFO("PlayerHandler", "Starting configuration");
                 m_state = PlayerHandlerState::CONFIG;
-                m_client.Send(m_context.registry_packets[0]);
-                m_client.Send(m_context.registry_packets[1]);
-                m_client.Send(m_context.registry_packets[2]);
-                m_client.Send(m_context.registry_packets[3]);
-                m_client.Send(m_context.registry_packets[4]);
-                m_client.Send(server::FinishConfiguration());
+                m_client.Send(server::KnownPacksPacket("minecraft", "core", "1.21.8"));
                 break;
             }
             default:
@@ -166,6 +166,17 @@ namespace mc
     {
         switch (genericPacket->GetId<client::ConfigPacketID>())
         {
+            case client::ConfigPacketID::KnownPacks:
+            {
+                SFW_LOG_DEBUG("PlayerHandler", "{}", *genericPacket);
+
+                SFW_LOG_INFO("PlayerHandler", "Sending registry data ...");
+                for (const auto& registry : m_context.registry_packets)
+                    m_client.Send(registry);
+                SFW_LOG_INFO("PlayerHandler", "Sending registry data ... DONE");
+                m_client.Send(server::FinishConfiguration());
+                break;
+            }
             case client::ConfigPacketID::AcknowledgeConfigEnd :
             {
                 SFW_LOG_INFO("PlayerHandler", "ConfigAcknowledged switching to play state");
@@ -188,6 +199,7 @@ namespace mc
 
                 for (auto it = sections->begin(); it != sections->end(); it++)
                 {
+                    [[maybe_unused]]
                     const auto& section = it.get<NBT::NBTCompound>();
                     util::ShortSerializer().Serialize(chunk_data, 23);
 

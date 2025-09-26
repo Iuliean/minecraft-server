@@ -13,7 +13,7 @@ namespace mc
     struct ServerContext
     {
         //Registry packets are prebuilt from the json
-        std::array<std::vector<std::uint8_t>, 8> registry_packets;
+        std::array<std::vector<std::uint8_t>, 22> registry_packets;
         ChunkRegion chunk_region;
     };
 }

@@ -1,0 +1,51 @@
+{
+    "version": 10,
+    "cmakeMinimumRequired": { "major": 4, "minor": 1, "patch": 1},
+    "configurePresets":[
+        {
+            "name": "x86_64",
+            "displayName": "x86_64",
+            "installDir": "${sourceDir}/out/dist/x86_64-${generator}",
+            "cacheVariables":{
+                "CMAKE_EXPORT_COMPILE_COMMANDS":{
+                    "type": "BOOL",
+                    "value": "ON"
+                }
+
+            }
+        },
+        {
+            "name": "x86_64-Debug",
+            "displayName": "x86_64-Debug",
+            "installDir": "${sourceDir}/out/dist/x86_64-Debug",
+            "inherits": "x86_64",
+            "cacheVariables":{
+                "CMAKE_BUILD_TYPE":{
+                    "type":"STRING",
+                    "value": "Debug"
+                }
+            }
+        },
+        {
+            "name": "x86_64-Release",
+            "displayName": "x86_64-Release",
+            "installDir": "${sourceDir}/out/dist/x86_64-Release",
+            "inherits": "x86_64",
+            "cacheVariables":{
+                "CMAKE_BUILD_TYPE":{
+                    "type":"STRING",
+                    "value": "Release"
+                }
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+          "name": "x86_64-Debug",
+          "configurePreset": "x86_64-Debug",
+          "jobs": 12,
+          "verbose": true
+        }
+    ]
+
+}

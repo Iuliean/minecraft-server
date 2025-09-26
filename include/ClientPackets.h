@@ -6,6 +6,7 @@
 #include <bits/stdint-uintn.h>
 #include <spdlog/fmt/fmt.h>
 #include <string>
+#include <utility>
 
 namespace mc
 {
@@ -35,7 +36,8 @@ namespace mc
         enum class ConfigPacketID : int
         {
             UNKNOWN = -1,
-            AcknowledgeConfigEnd = 0x03
+            AcknowledgeConfigEnd = 0x03,
+            KnownPacks = 0x07
         };
 
         enum class PlayPacketID : int
@@ -112,6 +114,29 @@ namespace mc
         // *****************
         // * ConfigPackets *
         // *****************
+
+        class KnownPacksPacket : public Packet
+        {
+        public:
+            template<util::IteratorU8 Iter>
+            KnownPacksPacket(Iter& data)
+                : Packet(std::to_underlying(ConfigPacketID::KnownPacks)),
+                  m_namespace([&data](){util::readVarInt(data); return util::readString(data);}()),
+                  m_id(util::readString(data)),
+                  m_version(util::readString(data))
+            {
+            }
+            virtual ~KnownPacksPacket() {}
+            std::string AsString() const override
+            {
+                return std::format("{{namespace: {}, id: {}, version: {}}}", m_namespace, m_version, m_id);
+            }
+            constexpr std::string PacketName()const override { return "KnownPacks"; }
+        private:
+            std::string m_namespace;
+            std::string m_id;
+            std::string m_version;
+        };
 
         class AcknowledgeConfig : public Packet
         {

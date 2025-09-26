@@ -7,10 +7,12 @@
 #include "Packet.h"
 #include "DataTypes/Position.h"
 #include <nlohmann/json.hpp>
+#include "SFW/Serializer.h"
 #include "utils.h"
 
 #include <cstdint>
 #include <string>
+#include <unistd.h>
 namespace mc::server
 {
 
@@ -28,13 +30,14 @@ namespace mc::server
     enum class LoginPacketID : int
     {
         UNKNOWN = -1,
-        SUCCESS = 2
+        SUCCESS = 0x02
     };
 
     enum class ConfigPacketID : int
     {
         UNKNOWN = -1,
         FinishConfiguration = 0x03,
+        KnownPacks = 0x0E
     };
 
     enum class PlayPacketID : int
@@ -55,7 +58,7 @@ namespace mc::server
         LoginSuccessPacket(const client::LoginStartPacket& packet);
 
         inline util::uuid GetUUID() const { return m_uuid; }
-        inline const std::string& GetName() const { return m_name; }
+        inline const std::string GetName() const { return m_name; }
 
         inline std::string AsString() const override
         {
@@ -65,17 +68,14 @@ namespace mc::server
         inline constexpr std::string PacketName() const override { return "LoginSuccessPacket"; }
         inline size_t Size() const override 
         {
-            return 1 +
-            sizeof(util::uuid) +
+            return sizeof(util::uuid) +
             util::sizeOfString(m_name) +
-            util::sizeOfVarInt(m_numOfElements) +
-            sizeof(bool);
+            util::sizeOfVarInt(m_numOfElements);
         }
     private:
         util::uuid m_uuid;
         std::string m_name;
         util::varInt m_numOfElements;
-        bool m_strictErrorHandling;
     };
 
     // *****************
@@ -105,7 +105,19 @@ namespace mc::server
     // * ConfigPackets *
     // *****************
 
-   class FinishConfiguration : public Packet
+    class KnownPacksPacket : public Packet
+    {
+    public:
+        KnownPacksPacket(std::string nspace, std::string id, std::string version);
+        ~KnownPacksPacket() = default;
+    private:
+        friend iu::Serializer<KnownPacksPacket>;
+        std::string m_namespace;
+        std::string m_id;
+        std::string m_version;
+    };
+
+    class FinishConfiguration : public Packet
     {
     public:
         FinishConfiguration();
@@ -142,7 +154,8 @@ namespace mc::server
                                                "isDebug:{}, "
                                                "isFlat:{}, "
                                                "hasDeathLocation:{}, "
-                                               "portalCooldown:{}";
+                                               "portalCooldown:{}"
+                                               "seaLevel:{}";
             return std::format(text,
                 m_entityID,
                 m_isHardcore,
@@ -158,28 +171,42 @@ namespace mc::server
                 m_isDebug,
                 m_isFlat,
                 m_hasDeathLocation,
+                m_seaLevel,
                 m_portalCooldown);
         }
 
         inline constexpr std::string PacketName() const override { return "LoginPlay"; }
         inline size_t Size() const override
         {
-            size_t idendtifiers_size = 0;
+            const size_t deathLocationSize =
+                m_hasDeathLocation ? (util::sizeOfString(m_deathDimension->AsString()) + sizeof(*m_deathDimension)) : 0;
+
+            size_t idendtifiers_size = util::sizeOfVarInt(m_dimensionIdentifiers.size());
             for (const auto& identifier: m_dimensionIdentifiers)
                 idendtifiers_size += util::sizeOfString(identifier.AsString());
-            return 2 + //2 is because the field of the optionals is needed
-            sizeof(int32_t) +
-            (8 * sizeof(bool)) +
-            util::sizeOfVarInt(m_dimensionIdentifiers.size()) +
-            idendtifiers_size +
-            util::sizeOfVarInt(m_maxPlayers) +
-            util::sizeOfVarInt(m_viewDistance) +
-            util::sizeOfVarInt(m_simulationDistance) +
-            util::sizeOfVarInt(m_dimensionType) +
-            util::sizeOfString(m_dimensionName.AsString()) +
-            sizeof(int64_t) + sizeof(uint8_t) + sizeof(int8_t) +
-            (m_deathDimension.has_value() ? util::sizeOfString(m_deathDimension.value().AsString()) : 0) +
-            (m_deathPosition.has_value() ? sizeof(Position) : 0);
+
+            return 1 + //ID
+                sizeof(m_entityID) +
+                sizeof(m_isHardcore) +
+                idendtifiers_size +
+                util::sizeOfVarInt(m_maxPlayers) +
+                util::sizeOfVarInt(m_viewDistance) +
+                util::sizeOfVarInt(m_simulationDistance) +
+                sizeof(m_reducedDebugInfo) +
+                sizeof(m_enableRespawnScreen) +
+                sizeof(m_limitedCrafting) +
+                util::sizeOfVarInt(m_dimensionType) +
+                util::sizeOfString(m_dimensionName.AsString()) +
+                sizeof(m_seedHash) +
+                sizeof(m_gameMode) +
+                sizeof(m_previousGameMode) +
+                sizeof(m_isDebug) +
+                sizeof(m_isFlat) +
+                sizeof(m_hasDeathLocation) +
+                deathLocationSize +
+                util::sizeOfVarInt(m_portalCooldown) +
+                util::sizeOfVarInt(m_seaLevel) +
+                sizeof(m_enforceSecureChat);
         }
 
     private:
@@ -205,6 +232,7 @@ namespace mc::server
         std::optional<Identifier> m_deathDimension;
         std::optional<Position> m_deathPosition;
         util::varInt m_portalCooldown;
+        util::varInt m_seaLevel;
         bool m_enforceSecureChat;
     };
 
@@ -282,11 +310,10 @@ struct iu::Serializer<mc::server::LoginSuccessPacket>
         using namespace mc::util;
         Serializer<uuid> uuidSerializer;
 
-        writeVarInt(buffer, toSerialize.Size());
+        writeVarInt(buffer, toSerialize.Size() + 1);
         writeVarInt(buffer, toSerialize.GetId<int>());
         uuidSerializer.Serialize(buffer, toSerialize.GetUUID());
         writeStringToBuff(buffer, toSerialize.GetName());
-        writeVarInt(buffer, 0);
         writeVarInt(buffer, 0);
     }
 };
@@ -331,6 +358,7 @@ struct iu::Serializer<mc::server::LoginPlayPacket>
         Serializer<mc::Position> positionSerializer;
         Serializer<std::vector<mc::Identifier>> identifierVecSerializer;
 
+        writeVarInt(buffer, toSerialize.Size());
         writeVarInt(buffer, toSerialize.GetId<int>());
         intSerializer.Serialize(buffer, toSerialize.m_entityID);
         boolSerializer.Serialize(buffer, toSerialize.m_isHardcore);
@@ -349,7 +377,7 @@ struct iu::Serializer<mc::server::LoginPlayPacket>
         byteSerialier.Serialize(buffer, toSerialize.m_previousGameMode);
         boolSerializer.Serialize(buffer, toSerialize.m_isDebug);
         boolSerializer.Serialize(buffer, toSerialize.m_isFlat);
-        byteSerialier.Serialize(buffer, toSerialize.m_deathDimension.has_value() && toSerialize.m_deathPosition.has_value());
+        boolSerializer.Serialize(buffer, toSerialize.m_deathDimension.has_value() && toSerialize.m_deathPosition.has_value());
 
         if(toSerialize.m_deathDimension.has_value() && toSerialize.m_deathPosition.has_value())
         {
@@ -358,8 +386,8 @@ struct iu::Serializer<mc::server::LoginPlayPacket>
         }
 
         writeVarInt(buffer, toSerialize.m_portalCooldown);
-        byteSerialier.Serialize(buffer, toSerialize.m_enforceSecureChat);
-        writeVarInt(buffer, 0, toSerialize.Size());
+        writeVarInt(buffer, toSerialize.m_seaLevel);
+        boolSerializer.Serialize(buffer, toSerialize.m_enforceSecureChat);
     }
 };
 
@@ -404,6 +432,26 @@ struct iu::Serializer<mc::server::SynchronisePlayerPosition>
         FloatSerializer().Serialize(buffer, toSerialize.m_pitch);
         ByteSerializer().Serialize(buffer, toSerialize.m_relativeMask);
         writeVarInt(buffer, toSerialize.m_teleportID);
+    }
+};
+
+template<>
+struct iu::Serializer<mc::server::KnownPacksPacket>
+{
+    void Serialize(std::vector<uint8_t>& buffer, const mc::server::KnownPacksPacket& toSerialize)
+    {
+        using namespace mc::util;
+        const int packetSize = 2 +
+                                  sizeOfString(toSerialize.m_namespace) +
+                                  sizeOfString(toSerialize.m_id) +
+                                  sizeOfString(toSerialize.m_version);
+
+        writeVarInt(buffer, packetSize);
+        writeVarInt(buffer, toSerialize.GetId<int>());
+        writeVarInt(buffer, 1);
+        writeStringToBuff(buffer, toSerialize.m_namespace);
+        writeStringToBuff(buffer, toSerialize.m_id);
+        writeStringToBuff(buffer, toSerialize.m_version);
     }
 };
 

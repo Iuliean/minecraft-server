@@ -327,6 +327,8 @@ namespace mc::NBT
         [[nodiscard("You might want to use the output of Contains :)")]]
         bool Contains (const std::string& name) const noexcept { return m_objectsTree.find(name) != end();}
 
+        size_t Size() const noexcept { return m_objectsTree.size(); }
+
         TagMap::iterator begin() { return m_objectsTree.begin(); }
 
         TagMap::iterator end() { return m_objectsTree.end(); }
@@ -422,7 +424,7 @@ namespace mc::NBT
         private:
             TagPtr* m_it;
         };
-
+        
         class ConstIterator
         {
         public:

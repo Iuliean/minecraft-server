@@ -1,10 +1,16 @@
 cmake_minimum_required(VERSION 3.27.7)
 
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+
+
+set(FLAGS -Wall -Werror -Wpedantic -Wno-deprecated-literal-operator)
+
 project(mc-server)
 
 include(FetchContent)
 FetchContent_Declare(ZStrGitRepo
-  GIT_REPOSITORY    "https://github.com/mateidavid/zstr" # can also be a local filesystem path!
+  GIT_REPOSITORY    "https://github.com/mateidavid/zstr" # can also be a local "data/registries/blocks.json" "data/registries/items.json" "data/registries/registries.json" "registry.json"ystem path!
   GIT_TAG           "master"
 )
 FetchContent_MakeAvailable(ZStrGitRepo)
@@ -20,4 +26,7 @@ target_include_directories(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME} PRIVATE SFW::SFW PRIVATE zstr::zstr)
 
-set_property(TARGET SFW PROPERTY CXX_STANDARD 20)
+target_compile_options(${PROJECT_NAME} PRIVATE ${FLAGS})
+
+
+install(DIRECTORY "data/registries/packets" DESTINATION ${CMAKE_INSTALL_PREFIX})

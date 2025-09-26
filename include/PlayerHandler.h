@@ -133,6 +133,8 @@ namespace mc
             {
                 case mc::client::ConfigPacketID::AcknowledgeConfigEnd:
                     return std::make_unique<AcknowledgeConfig>();
+                case mc::client::ConfigPacketID::KnownPacks:
+                    return std::make_unique<KnownPacksPacket>(dataIter);
                 default:
                     //maybe needs to throw
                     SFW_LOG_WARN("PlayerHandler", "Invalid config packetID: {:0x}", packetID);
