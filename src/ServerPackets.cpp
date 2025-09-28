@@ -70,7 +70,7 @@ namespace mc::server
         m_dimensionType(0),
         m_dimensionName(Identifier("overworld")),
         m_seedHash(12312312),
-        m_gameMode(3),
+        m_gameMode(1),
         m_previousGameMode(-1),
         m_isDebug(false),
         m_isFlat(false),
@@ -90,15 +90,29 @@ namespace mc::server
     {
     }
 
-    SynchronisePlayerPosition::SynchronisePlayerPosition(double x, double y, double z, float yaw, float pitch, std::uint8_t relativeMask)
+    SynchronisePlayerPosition::SynchronisePlayerPosition(
+            util::varInt teleportID,
+            double x,
+            double y,
+            double z,
+            double velocity_x,
+            double velocity_y,
+            double velocity_z,
+            float yaw,
+            float pitch,
+            int relativeMask
+        )
         : Packet((int)PlayPacketID::SynchronisePlayerPosition),
-        m_x(x),
-        m_y(y),
-        m_z(z),
-        m_yaw(yaw),
-        m_pitch(pitch),
-        m_relativeMask(relativeMask),
-        m_teleportID(123)
+          m_teleportID(teleportID),
+          m_x(x),
+          m_y(y),
+          m_z(z),
+          m_velocity_x(velocity_x),
+          m_velocity_y(velocity_y),
+          m_velocity_z(velocity_z),
+          m_yaw(yaw),
+          m_pitch(pitch),
+          m_relativeMask(relativeMask)
     {
     }
 } // namespace mc::server

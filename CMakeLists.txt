@@ -31,3 +31,4 @@ target_compile_options(${PROJECT_NAME} PRIVATE ${FLAGS})
 
 install(DIRECTORY "data/registries/packets" DESTINATION ${CMAKE_INSTALL_PREFIX})
 install(DIRECTORY "data/registries" DESTINATION ${CMAKE_INSTALL_PREFIX})
+install(DIRECTORY "data/map" DESTINATION ${CMAKE_INSTALL_PREFIX})

@@ -3,8 +3,10 @@
 #include <bit>
 #include <bits/stdint-uintn.h>
 #include <chrono>
+#include <ranges>
 #include <ratio>
 #include <thread>
+#include <algorithm>
 #include <vector>
 
 #include "BlockState.h"
@@ -182,8 +184,117 @@ namespace mc
                 SFW_LOG_INFO("PlayerHandler", "ConfigAcknowledged switching to play state");
                 m_state = PlayerHandlerState::PLAY;
                 m_client.Send(server::LoginPlayPacket());
+                SFW_LOG_INFO("PlayerHandler", "Login(play) sent");
                 m_client.Send(server::GameEvent(server::GameEvent::Event::StartWaitingForChunks, 0));
+                SFW_LOG_INFO("PlayerHandler", "GameEvent with StartWaitingForChunks sent");
 
+                {
+                    std::vector<uint8_t> chunk_center = {3, 0x57,1 ,1};
+                    m_client.Send(chunk_center);
+                }
+
+                const auto& chunk = m_context.chunk_region[0][0].value();
+                const auto& world_surface = chunk->Get<NBT::NBTCompound>("Heightmaps")->Get<NBT::LongArray>("WORLD_SURFACE");
+                const auto& motion_blocking = chunk->Get<NBT::NBTCompound>("Heightmaps")->Get<NBT::LongArray>("MOTION_BLOCKING");
+                const auto& motion_blocking_no_leaves = chunk->Get<NBT::NBTCompound>("Heightmaps")->Get<NBT::LongArray>("MOTION_BLOCKING_NO_LEAVES");
+                const auto& sections = chunk->Get<NBT::NBTList>("sections");
+                for (int i : std::views::iota(0,16))
+                    for(int j : std::views::iota(0,16))
+                {
+                    std::vector<uint8_t> chunk_data;
+
+                    util::writeVarInt(chunk_data, 0x27); //ID
+                    
+                    util::IntSerializer().Serialize(chunk_data, i);
+                    util::IntSerializer().Serialize(chunk_data, j);
+                
+                    //3 heighetmaps
+                    util::writeVarInt(chunk_data, 3);
+                    
+                    //world surface map
+                    //type of map
+                    util::writeVarInt(chunk_data, 1);
+                    util::writeVarInt(chunk_data, world_surface.Get().size());
+                    iu::Serializer<std::vector<NBT::Long>>().Serialize(chunk_data, world_surface.Get());
+                    
+                    //motion_blocking map
+                    //type of map
+                    util::writeVarInt(chunk_data, 4);
+                    util::writeVarInt(chunk_data, motion_blocking.Get().size());
+                    iu::Serializer<std::vector<NBT::Long>>().Serialize(chunk_data, motion_blocking.Get());
+                
+                    //motion blocking no leaves map
+                    //type of map
+                    util::writeVarInt(chunk_data, 5);
+                    util::writeVarInt(chunk_data, motion_blocking_no_leaves.Get().size());
+                    iu::Serializer<std::vector<NBT::Long>>().Serialize(chunk_data, motion_blocking_no_leaves.Get());
+                
+                    std::vector<uint8_t> chunk_section_data;
+                    for (auto it = sections->begin(); it != sections->end(); it++)
+                    {
+                        //non air blocks
+                        util::ShortSerializer().Serialize(chunk_section_data, 10000);
+                    
+                        //Block states
+                        //0 bpe singled value palette
+                        util::writeVarInt(chunk_section_data, 0);
+                        //Value of the palette
+                        util::writeVarInt(chunk_section_data, 10);
+
+                        //Biomes
+                        //0 bpe singled value palette
+                        util::writeVarInt(chunk_section_data, 0);
+                        //Value of the palette
+                        util::writeVarInt(chunk_section_data, 10);
+                    }
+
+                    util::writeVarInt(chunk_data, chunk_section_data.size());
+                    iu::Serializer<decltype(chunk_section_data)>().Serialize(chunk_data, chunk_section_data);
+                    //Block entities
+                    util::writeVarInt(chunk_data, 0);
+                
+                    BitSet sky_light_mask(sections->Size() + 2);
+                    BitSet block_light_mask(sections->Size() + 2);
+                    BitSet empty_sky_light_mask(sections->Size()+ 2);
+                    BitSet empty_block_light_mask(sections->Size() + 2);
+                
+                    for (size_t idx : std::views::iota(0zu, sections->Size() + 2))
+                    {
+                        sky_light_mask.Set(idx, true);
+                        block_light_mask.Set(idx, true);
+                        empty_sky_light_mask.Set(idx, false);
+                        empty_block_light_mask.Set(idx, false);
+                    }
+                    BitSetSerializer().Serialize(chunk_data, sky_light_mask);
+                    BitSetSerializer().Serialize(chunk_data, block_light_mask);
+                    BitSetSerializer().Serialize(chunk_data, empty_sky_light_mask);
+                    BitSetSerializer().Serialize(chunk_data, empty_block_light_mask);
+                
+                    util::writeVarInt(chunk_data, sections->Size() + 2);
+                    for ([[maybe_unused]]size_t idx : std::views::iota(0zu, sections->Size() + 2))
+                    {
+                        util::writeVarInt(chunk_data, 2048);
+                        iu::Serializer<std::vector<uint8_t>>().Serialize(chunk_data, std::ranges::to<std::vector<uint8_t>>(std::views::repeat(0xee, 2048)));
+                    }
+                
+                    util::writeVarInt(chunk_data, sections->Size() + 2);
+                    for ([[maybe_unused]]size_t idx : std::views::iota(0zu, sections->Size() + 2))
+                    {
+                        util::writeVarInt(chunk_data, 2048);
+                        iu::Serializer<std::vector<uint8_t>>().Serialize(chunk_data, std::ranges::to<std::vector<uint8_t>>(std::views::repeat(0xee, 2048)));
+                    }
+                
+                    util::writeVarInt(chunk_data, 0, chunk_data.size());
+                
+                    m_client.Send(chunk_data);
+                    SFW_LOG_INFO("PlayerHandler", "Chunk Data Sent {} {}", i, j);
+                }
+                for (;;)
+                {
+                    SFW_LOG_INFO("PlayerHandler", "Sent sync packet");
+                    m_client.Send(server::SynchronisePlayerPosition(0, 30, 320, 30, 0, 0, 0, 0, 0, 0));
+                    std::this_thread::sleep_for(std::chrono::seconds(10));
+                }
                 break;
             }
             default:

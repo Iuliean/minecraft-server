@@ -158,7 +158,7 @@ namespace mc
             {
 
                 default:
-                    SFW_LOG_WARN("PlayerHandler", "Invalid play packetID: {:0x}", packetID);
+                    //SFW_LOG_WARN("PlayerHandler", "Invalid play packetID: {:0x}", packetID);
                     return nullptr;
             }
         }

@@ -1,9 +1,12 @@
 #include <SFW/LoggerManager.h>
 #include <SFW/Connection.h>
 #include <algorithm>
+#include <bit>
 #include <bits/stdint-uintn.h>
+#include <cstddef>
 #include <filesystem>
 #include <ios>
+#include <ranges>
 #include <string>
 #include <sys/types.h>
 #include <fstream>
@@ -28,42 +31,35 @@ namespace mc
         [[maybe_unused]]
         ChunkRegion loadChunkRegion(std::filesystem::path path)
         {
+
             ChunkRegion out;
             std::ifstream data(path);
-
-            for (int x = 0; x < 32; ++x)
+            std::array<int, 1024> chunkOffsets;
+            [[maybe_unused]]
+            constexpr size_t  a = 4 * ((0 & 31) + (0 & 31) * 32);
+            data.read((char*)chunkOffsets.data(), sizeof(chunkOffsets));
+            data.seekg(0);
+            for (const int offsetAndSize : chunkOffsets)
             {
-                for (int y = 0; y < 32; ++y)
-                {
-                    //This can be done better
-                    //Instead of recomputing the offset of the chunk everytime
-                    //Just go forwards untill next 4096 multiple
-                    //The chunks are 4096 bytes padded
-                    //MAYBE
-                    
-                    size_t chunkLocationOffset = 4 * ((x & 31) + (y & 31) * 32);
-                    data.seekg(chunkLocationOffset);
-                    
-                    char chunkLocation[4] = {0,0,0,0};
-                    int chunkOffset;
-                    data.read((char*)&chunkOffset, 3);
-                    data.read(chunkLocation, 1);
-                    chunkOffset = (util::byteswap(chunkOffset) >> 8) * 4096 ;
-                    [[maybe_unused]]
-                    int sectorCount = chunkLocation[0];
-                    data.seekg(chunkOffset, data.beg);
-                    
-                    char lengthAndCompression[5];
-                    data.read(lengthAndCompression, 5);
-                    
-                    zstr::istreambuf decompressionBuffer(data.rdbuf());
-                    std::istream decompressedStream(&decompressionBuffer);
-                    
-                    SFW_LOG_INFO("loadChunkRegion", "x{}, y{}", x, y);
-                    out[x][y] = NBT::parse(decompressedStream);
-                }
-            }
+                const size_t offset = int(std::byteswap(int(offsetAndSize & 0x00ffffff)) >> 8) * 4096;
+                const size_t chunk_size = (offsetAndSize & 0xff000000) >> 24;
 
+                if (offset == 0 && chunk_size == 0) continue;
+
+                SFW_LOG_DEBUG("chunkLoading", "Loading chunk at offset:{:#x} with length:{} * 4kb sectors", offset, chunk_size);
+                data.seekg(offset + 5, data.beg);
+
+                zstr::istreambuf decompBuff(data.rdbuf());
+                std::istream stream(&decompBuff);
+
+                NBT::NBT chunk = NBT::parse(stream);
+
+                const size_t x = chunk->Get<NBT::Int>("xPos");
+                const size_t z = chunk->Get<NBT::Int>("zPos");
+                SFW_LOG_INFO("chunkLoading","Chunk x{}, z{}", x, z);
+
+                out[x][z].emplace(std::move(chunk));
+            }
             return out;
         }
     }
@@ -72,7 +68,7 @@ namespace mc
         : m_stop(false)
     {
         BuildRegistryPackets();
-        m_context.chunk_region = loadChunkRegion("r.0.0.mca");
+        m_context.chunk_region = loadChunkRegion("map/r.0.0.mca");
     }
 
     void MinecraftHanlder::OnConnected(iu::Connection& connection)

@@ -45,7 +45,7 @@ namespace mc::server
         UNKNOWN   = -1,
         GameEvent = 0x22,
         LoginPlay = 0x2b,
-        SynchronisePlayerPosition = 0x40
+        SynchronisePlayerPosition = 0x41
     };
 
     // ****************
@@ -271,12 +271,24 @@ namespace mc::server
     class SynchronisePlayerPosition : public Packet
     {
     public:
-        SynchronisePlayerPosition(double x, double y, double z, float yaw, float pitch, std::uint8_t relativeMask = 0);
+        SynchronisePlayerPosition(
+            util::varInt teleportID,
+            double x,
+            double y,
+            double z,
+            double velocity_x,
+            double velocity_y,
+            double velocity_z,
+            float yaw,
+            float pitch,
+            int relativeMask
+        );
         ~SynchronisePlayerPosition() = default;
 
         inline std::string AsString() const override
         {
-            constexpr auto fmt = "{}: "
+            constexpr auto fmt = 
+                "{}:"
                 "X: {}, Y: {}, Z: {}, Yaw: {}, Pitch: {},"
                 "RelativeMask:{:b}, TeleportID: {}";
             return std::format(fmt,
@@ -287,17 +299,37 @@ namespace mc::server
         }
 
         inline constexpr std::string PacketName() const override { return "SynchronisePlayerPosition"; }
-        inline size_t Size() const override { return 2 + (3 * sizeof(double)) + (2 * sizeof(float) + util::sizeOfVarInt(m_teleportID)); }
+        inline size_t Size() const override
+        {
+            return 1 + //ID
+                   util::sizeOfVarInt(m_teleportID) +
+                   sizeof(m_x) +
+                   sizeof(m_y) +
+                   sizeof(m_z) +
+                   sizeof(m_velocity_x) +
+                   sizeof(m_velocity_y) +
+                   sizeof(m_velocity_z) +
+                   sizeof(m_yaw) +
+                   sizeof(m_pitch) +
+                   sizeof(m_relativeMask);
+        }
     private:
         friend iu::Serializer<mc::server::SynchronisePlayerPosition>;
+
+        util::varInt m_teleportID;
 
         double m_x;
         double m_y;
         double m_z;
+
+        double m_velocity_x;
+        double m_velocity_y;
+        double m_velocity_z;
+
         float m_yaw;
         float m_pitch;
-        std::uint8_t m_relativeMask;
-        util::varInt m_teleportID;
+
+        int m_relativeMask;
     };
 
 } // namespace mc::server
@@ -425,13 +457,16 @@ struct iu::Serializer<mc::server::SynchronisePlayerPosition>
 
         writeVarInt(buffer, GetSize(toSerialize));
         writeVarInt(buffer, toSerialize.GetId<mc::NBT::Int>());
+        writeVarInt(buffer, toSerialize.m_teleportID);
         DoubleSerializer().Serialize(buffer, toSerialize.m_x);
         DoubleSerializer().Serialize(buffer, toSerialize.m_y);
         DoubleSerializer().Serialize(buffer, toSerialize.m_z);
+        DoubleSerializer().Serialize(buffer, toSerialize.m_velocity_x);
+        DoubleSerializer().Serialize(buffer, toSerialize.m_velocity_y);
+        DoubleSerializer().Serialize(buffer, toSerialize.m_velocity_z);
         FloatSerializer().Serialize(buffer, toSerialize.m_yaw);
         FloatSerializer().Serialize(buffer, toSerialize.m_pitch);
-        ByteSerializer().Serialize(buffer, toSerialize.m_relativeMask);
-        writeVarInt(buffer, toSerialize.m_teleportID);
+        IntSerializer().Serialize(buffer, toSerialize.m_relativeMask);
     }
 };
 
