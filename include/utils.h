@@ -3,7 +3,9 @@
 
 #include <SFW/Serializer.h>
 #include <SFW/LoggerManager.h>
+#include <bit>
 #include <concepts>
+#include <cstddef>
 #include <cstdint>
 #include <nlohmann/json.hpp>
 
@@ -15,6 +17,7 @@
 #include <map>
 #include <string_view>
 #include <iterator>
+#include <type_traits>
 #include <vector>
 #include <variant>
 #include <format>
@@ -187,6 +190,17 @@ struct std::formatter<nlohmann::json> : public std::formatter<std::string>
     }
 };
 
+template<>
+struct std::formatter<std::byte> : public std::formatter<std::string>
+{
+    template<typename FmtContext>
+    FmtContext::iterator format(const std::byte& byte, FmtContext& ctx) const
+    {
+
+        return std::format_to(ctx.out(), "b{:#x}", std::to_integer<int>(byte));
+    }
+};
+
 template<typename ...Args>
 struct std::formatter<std::variant<Args...>> : public std::formatter<std::string>
 {
@@ -201,52 +215,8 @@ struct std::formatter<std::variant<Args...>> : public std::formatter<std::string
     }
 };
 
-template<typename T, typename R>
-struct std::formatter<std::pair<T,R>> : public std::formatter<std::string>
-{
-    template<typename FmtContext>
-    FmtContext::iterator format(const std::pair<T,R>& my, FmtContext& ctx) const
-    {
-        return std::format_to(ctx.out(), "{}:{}", my.first, my.second);
-    }
-};
-
-template<typename T>
-struct std::formatter<std::vector<T>> : public std::formatter<std::string>
-{
-    template<typename FmtContext>
-    FmtContext::iterator format(const std::vector<T>& my, FmtContext& ctx) const
-    {
-        for (const auto& el : my)
-            std::format_to(ctx.out(), "{}, ", el);
-        return ctx.out();
-    }
-};
-
-template<typename T, typename R>
-struct std::formatter<std::map<T, R>> : public std::formatter<std::string>
-{
-    template<typename FmtContext>
-    FmtContext::iterator format(const std::map<T, R>& my, FmtContext& ctx) const
-    {
-        for (const auto& el : my)
-            std::format_to(ctx.out(), "{}, ", el);
-        return ctx.out();
-    }
-};
-
 
 // SERIALIZERS
-template<iu::Serializable S>
-struct iu::Serializer<std::vector<S>>
-{
-    void Serialize(std::vector<uint8_t>& buffer, const std::vector<S>& toSerialize)
-    {
-        iu::Serializer<S> serializer;
-        for(const auto& obj : toSerialize)
-            serializer.Serialize(buffer, obj);
-    }
-};
 
 template<mc::util::Numeric T>
 struct iu::Serializer<T>
@@ -262,6 +232,29 @@ struct iu::Serializer<T>
     }
 };
 
+template<std::ranges::input_range R>
+struct iu::Serializer<R>
+{
+    void Serialzie(std::vector<uint8_t>& buffer, const R& range)
+    {
+        for (const auto& value : range)
+        {
+            iu::Serializer<decltype(value)>().Serialize(buffer, value);
+        }
+    }
+};
+
+template<>
+struct iu::Serializer<std::byte>
+{
+    consteval size_t GetSize(std::byte value) const noexcept { return 1; }
+
+    void Serialize(std::vector<uint8_t>& buffer, std::byte value) const noexcept
+    {
+        buffer.push_back(std::bit_cast<uint8_t>(value));
+    }
+};
+
 template<>
 struct iu::Serializer<mc::util::uuid>
 {
@@ -274,10 +267,19 @@ struct iu::Serializer<mc::util::uuid>
     }
 };
 
+template<typename ...Args>
+struct iu::Serializer<std::variant<Args...>>
+{
+    void Serialize(std::vector<uint8_t>& buffer, const std::variant<Args...>& obj)
+    {
+        std::visit([&buffer](const auto& value) { iu::Serializer<std::remove_cvref_t<decltype(value)>>().Serialize(buffer, value); }, obj );
+    }
+};
 namespace mc::util
 {
+    using ByteSerialzier = iu::Serializer<std::byte>;
     using BoolSerializer = iu::Serializer<bool>;
-    using ByteSerializer = iu::Serializer<std::uint8_t>;
+    using CharSerializer = iu::Serializer<char>;
     using ShortSerializer = iu::Serializer<std::uint16_t>;
     using IntSerializer  = iu::Serializer<std::int32_t>;
     using LongSerializer = iu::Serializer<std::int64_t>;

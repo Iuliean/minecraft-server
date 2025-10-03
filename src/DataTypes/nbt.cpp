@@ -1,9 +1,14 @@
-#include "DataTypes/nbt.h"
-#include "utils.h"
+#include <bit>
+#include <concepts>
 #include <istream>
 #include <stdexcept>
 #include <string>
-namespace mc::NBT
+#include <utility>
+
+#include "DataTypes/nbt.h"
+#include "utils.h"
+
+namespace mc::nbt
 {
 
     void serializeString(std::vector<std::uint8_t>& buffer, const std::string &data)
@@ -12,114 +17,33 @@ namespace mc::NBT
         buffer.insert(buffer.end(), data.begin(), data.end());
     }
 
-    NBTTag::NBTTag(TagType type)
-        : m_tagType(type)
-    {}
-
-    NBTTag::NBTTag()
-        : m_tagType(TagType::UNKNOWN)
-    {}
-
-    NBTCompound::NBTCompound(const NBTCompound& other)
-    {
-        Copy(other);
-    }
-
-    NBTCompound& NBTCompound::operator=(const NBTCompound& other)
-    {
-        Copy(other);
-        return *this;
-    }
-
-    void NBTCompound::Copy(const NBTCompound& other)
-    {
-        for(auto& tag : other.m_objectsTree)
-        {
-            m_objectsTree.insert(std::make_pair(tag.first, tag.second->Clone()));
-        }
-    }
-    /* ***************************** NBTList ***************************** */
-
-    NBTList::Iterator::Iterator(TagPtr* it)
-        : m_it(it)
-    {
-    }
-
-    NBTList::ConstIterator::ConstIterator(const TagPtr* it)
-        : m_it(it)
-    {
-    }
-
-    NBTList::NBTList()
-        : m_tagsType(TagType::UNKNOWN)
-    {
-    }
-
-    NBTList::NBTList(TagType type)
-        : m_tagsType(type)
-    {
-    }
-
-    NBTList::NBTList(const NBTList& other)
-        : NBTList()
-    {
-        Assign(other);
-    }
-
-    NBTList& NBTList::operator=(const NBTList &other)
-    {
-        Assign(other);
-        return *this;
-    }
-
-    NBTTag& NBTList::operator[](size_t pos)
-    {
-        ASSERT(pos < Size(), "Out of bounds access");
-        return *m_objectsList[pos].get();
-    }
-         
-    const NBTTag& NBTList::operator[](size_t pos) const
-    {
-        ASSERT(pos < Size(), "Out of bounds access");
-        return *m_objectsList[pos].get();
-    }
-
-    void NBTList::Assign(const NBTList& other)
-    {
-        m_tagsType = other.m_tagsType;
-        
-        //Deallocate any existing objects
-        if (m_objectsList.size() > 0)
-            m_objectsList.clear();
-        
-        if(other.m_objectsList.size() == 0)
-            return;
-        
-        for(auto& obj : other.m_objectsList)
-        {
-            m_objectsList.emplace_back(obj->Clone());
-        }
-    }
-  
     /******************** Other ********************/
 
-    TagType parseTagType(std::istream& data)
+    tag_type parseTagType(std::istream& data)
     {
-        char tag = (char)TagType::UNKNOWN;
+        char tag = std::to_underlying(tag_type::UNKNOWN);
         data.read(&tag, 1);
-        return tag < -2 || tag >> 12 ? TagType::UNKNOWN : (TagType)tag;
+        return tag < -2 || tag >> 12 ? tag_type::UNKNOWN : static_cast<tag_type>(tag);
     }
 
-    template<mc::util::Numeric T>
+    template<typename T>
     T parseNumeric(std::istream& data)
+        requires std::integral<T> || std::same_as<Byte, T>
     {
-        T out = 0;
+        T out{0};
         data.read((char*)&out, sizeof(T));
-        char* asBytes = (char*)&out;
 
-        for (size_t k = 0; k < sizeof(T)/2; k++)
-            std::swap(asBytes[k], asBytes[sizeof(T) - k - 1]);
+        if constexpr(std::same_as<Byte, T>)
+            return out;
+        else
+            return std::byteswap(out);
+    }
 
+    template<std::floating_point T>
+    T parseFloat(std::istream& data)
+    {
+        T out;
+        data.read(reinterpret_cast<char*>(&out), sizeof(T));
         return out;
     }
 
@@ -142,17 +66,17 @@ namespace mc::NBT
         return out;
     }
 
-    NBTList parseList(std::istream& data);
+    list parseList(std::istream& data);
 
     //Probably will require more error checking in the future
-    NBTCompound parseCompound(std::istream& data)
+    compound parseCompound(std::istream& data)
     {
-        NBTCompound obj;
+        compound obj;
         while(data.good())
         {
-            TagType nextTag = parseTagType(data);
+            tag_type nextTag = parseTagType(data);
 
-            if(nextTag == TagType::END)
+            if(nextTag == tag_type::END)
             {
                 return obj;
             }
@@ -160,41 +84,41 @@ namespace mc::NBT
             std::string tagName = parseString(data);
             switch(nextTag)
             {
-                case TagType::BYTE:
-                    obj.Insert(tagName, parseNumeric<Byte>(data));
+                case tag_type::BYTE:
+                    obj.emplace(tagName, parseNumeric<Byte>(data));
                     break;
-                case TagType::SHORT:
-                    obj.Insert(tagName, parseNumeric<Short>(data));
+                case tag_type::SHORT:
+                    obj.emplace(tagName, parseNumeric<Short>(data));
                     break;
-                case TagType::INT:
-                    obj.Insert(tagName, parseNumeric<Int>(data));
+                case tag_type::INT:
+                    obj.emplace(tagName, parseNumeric<Int>(data));
                     break;
-                case TagType::LONG:
-                    obj.Insert(tagName, parseNumeric<Long>(data));
+                case tag_type::LONG:
+                    obj.emplace(tagName, parseNumeric<Long>(data));
                     break;
-                case TagType::FLOAT:
-                    obj.Insert(tagName, parseNumeric<Float>(data));
+                case tag_type::FLOAT:
+                    obj.emplace(tagName, parseFloat<Float>(data));
                     break;
-                case TagType::DOUBLE:
-                    obj.Insert(tagName, parseNumeric<Double>(data));
+                case tag_type::DOUBLE:
+                    obj.emplace(tagName, parseFloat<Double>(data));
                     break;
-                case TagType::BYTE_ARRAY:
-                    obj.Insert(tagName, parseArray<Byte>(data));
+                case tag_type::BYTE_ARRAY:
+                    obj.emplace(tagName, parseArray<Byte>(data));
                     break;
-                case TagType::STRING:
-                    obj.Insert(tagName, parseString(data));
+                case tag_type::STRING:
+                    obj.emplace(tagName, parseString(data));
                     break;
-                case TagType::LIST:
-                    obj.Insert(tagName, parseList(data));
+                case tag_type::LIST:
+                    obj.emplace(tagName, parseList(data));
                     break;
-                case TagType::COMPOUND:
-                    obj.Insert(tagName, parseCompound(data));
+                case tag_type::COMPOUND:
+                    obj.emplace(tagName, parseCompound(data));
                     break;
-                case TagType::INT_ARRAY:
-                    obj.Insert(tagName, parseArray<Int>(data));
+                case tag_type::INT_ARRAY:
+                    obj.emplace(tagName, parseArray<Int>(data));
                     break;
-                case TagType::LONG_ARRAY:
-                    obj.Insert(tagName, parseArray<Long>(data));
+                case tag_type::LONG_ARRAY:
+                    obj.emplace(tagName, parseArray<Long>(data));
                     break;
                 default:
                     throw std::runtime_error("Unknown tag type" + std::to_string((int)nextTag));
@@ -205,60 +129,61 @@ namespace mc::NBT
     }
 
     //Probably will require more error checking in the future
-    NBTList parseList(std::istream& data)
+    list parseList(std::istream& data)
     {
-        NBTList out;
-        TagType containedType = parseTagType(data);
+        list out;
+        tag_type contained_type = parseTagType(data);
         Int size = parseNumeric<Int>(data);
         Int count = 0;
+        out.set_list_type(contained_type);
         while(data.good())
         {
 
-            if (containedType == TagType::END || count >= size)
+            if (contained_type == tag_type::END || count >= size)
             {
                 return out;
             }
 
-            switch(containedType)
+            switch(contained_type)
             {
-                case TagType::BYTE:
-                    out.Insert(parseNumeric<Byte>(data));
+                case tag_type::BYTE:
+                    out.emplace_back(parseNumeric<Byte>(data));
                     break;
-                case TagType::SHORT:
-                    out.Insert(parseNumeric<Short>(data));
+                case tag_type::SHORT:
+                    out.emplace_back(parseNumeric<Short>(data));
                     break;
-                case TagType::INT:
-                    out.Insert(parseNumeric<Int>(data));
+                case tag_type::INT:
+                    out.emplace_back(parseNumeric<Int>(data));
                     break;
-                case TagType::LONG:
-                    out.Insert(parseNumeric<Long>(data));
+                case tag_type::LONG:
+                    out.emplace_back(parseNumeric<Long>(data));
                     break;
-                case TagType::FLOAT:
-                    out.Insert(parseNumeric<Float>(data));
+                case tag_type::FLOAT:
+                    out.emplace_back(parseFloat<Float>(data));
                     break;
-                case TagType::DOUBLE:
-                    out.Insert(parseNumeric<Double>(data));
+                case tag_type::DOUBLE:
+                    out.emplace_back(parseFloat<Double>(data));
                     break;
-                case TagType::BYTE_ARRAY:
-                    out.Insert(parseArray<Byte>(data));
+                case tag_type::BYTE_ARRAY:
+                    out.emplace_back(parseArray<Byte>(data));
                     break;
-                case TagType::STRING:
-                    out.Insert(parseString(data));
+                case tag_type::STRING:
+                    out.emplace_back(parseString(data));
                     break;
-                case TagType::LIST:
-                    out.Insert(parseList(data));
+                case tag_type::LIST:
+                    out.emplace_back(parseList(data));
                     break;
-                case TagType::COMPOUND:
-                    out.Insert(parseCompound(data));
+                case tag_type::COMPOUND:
+                    out.emplace_back(parseCompound(data));
                     break;
-                case TagType::INT_ARRAY:
-                    out.Insert(parseArray<Int>(data));
+                case tag_type::INT_ARRAY:
+                    out.emplace_back(parseArray<Int>(data));
                     break;
-                case TagType::LONG_ARRAY:
-                    out.Insert(parseArray<Long>(data));
+                case tag_type::LONG_ARRAY:
+                    out.emplace_back(parseArray<Long>(data));
                     break;
                 default:
-                    throw std::runtime_error("Unknown tag type" + std::to_string((int)containedType));
+                    throw std::runtime_error("Unknown tag type" + std::to_string(std::to_underlying(contained_type)));
             }
             ++count;
         }
@@ -266,15 +191,15 @@ namespace mc::NBT
     }
 
 
-    NBT parse(std::istream& data)
+    nbt parse(std::istream& data)
     {
-        if (parseTagType(data) != TagType::COMPOUND)
+        if (parseTagType(data) != tag_type::COMPOUND)
         {
-            throw std::runtime_error("Root component is not Compund tag");
+            throw nbt_error("Failed to parse root nbt tag. Tag type is not compund");
         }
 
         std::string name = parseString(data);
-        NBT root(name, parseCompound(data));
+        nbt root(parseCompound(data));
 
         return root;
     }

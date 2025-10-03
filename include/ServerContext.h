@@ -8,7 +8,7 @@
 
 namespace mc
 {
-    using ChunkRegion = std::array<std::array<std::optional<NBT::NBT>, 32>, 32>;
+    using ChunkRegion = std::array<std::array<std::optional<nbt::tag>, 32>, 32>;
 
     struct ServerContext
     {
