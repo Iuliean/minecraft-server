@@ -15,10 +15,18 @@ FetchContent_Declare(ZStrGitRepo
 )
 FetchContent_MakeAvailable(ZStrGitRepo)
 
+FetchContent_Declare(
+  googletest
+  URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
+)
+
+FetchContent_MakeAvailable(googletest)
+
 add_subdirectory(dependencies/SFW)
 add_subdirectory(dependencies/nlohmann-json)
 
 add_subdirectory(src)
+add_subdirectory(test)
 
 target_include_directories(${PROJECT_NAME}
                         PRIVATE include/

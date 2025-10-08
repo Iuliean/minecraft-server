@@ -52,10 +52,10 @@ namespace mc
                 zstr::istreambuf decompBuff(data.rdbuf());
                 std::istream stream(&decompBuff);
 
-                NBT::NBT chunk = NBT::parse(stream);
+                nbt::nbt chunk = nbt::parse(stream);
 
-                const size_t x = chunk->Get<NBT::Int>("xPos");
-                const size_t z = chunk->Get<NBT::Int>("zPos");
+                const int x = chunk["xPos"];
+                const int z = chunk["zPos"];
                 SFW_LOG_INFO("chunkLoading","Chunk x{}, z{}", x, z);
 
                 out[x][z].emplace(std::move(chunk));
