@@ -1,6 +1,7 @@
 #ifndef NBT_H
 #define NBT_H
 
+#include <bit>
 #include <concepts>
 #include <cstddef>
 #include <format>
@@ -24,7 +25,7 @@
 #include "utils.h"
 namespace mc::nbt
 {
-    enum class tag_type
+    enum class tag_type : char
     {
 
         UNKNOWN      = -2,
@@ -66,7 +67,8 @@ namespace mc::nbt
     class named_tag;
     class tag;
     using value = std::variant<Byte, Short, Int, Long, Float, Double, String, ByteArray, IntArray, LongArray, compound, list>;
-    using nbt = tag;
+    using nbt = named_tag;
+
     class nbt_error : public std::runtime_error
     {
     public:
@@ -127,13 +129,25 @@ namespace mc::nbt
         (can_construct_nbt_tag<typename std::ranges::range_value_t<T>>||
         std::same_as<value, std::ranges::range_value_t<T>>);
 
-    //For now this uses a normal tag
-    //Maybe a named tag is needed we will see
-    class compound final : public std::unordered_map<std::string, tag>
+    using map_type = std::unordered_map<std::string, named_tag>;
+    class compound final : public map_type
     {
     public:
-
+        using iterator = map_type::iterator;
+        using mapped_type = map_type::mapped_type;
         ~compound() = default;
+
+        std::pair<iterator, bool> insert(const mapped_type& value);
+        std::pair<iterator, bool> insert(mapped_type&& value);
+
+
+        template<can_construct_nbt_tag T, typename ...Args >
+        std::pair<iterator, bool> emplace(std::string name, Args&&... args );
+        template<can_construct_nbt_tag T, typename ...Args >
+        std::pair<iterator, bool> emplace(std::string_view name, Args&&... args );
+
+        const mapped_type& operator[](const std::string& name) const;
+        const mapped_type& operator[](std::string&& name) const;
     };
 
     class list
@@ -288,7 +302,7 @@ namespace mc::nbt
         template<can_construct_nbt_tag T>
         operator const T&() const
         {
-            return std::get<T>(this);
+            return std::get<T>(*this);
         }
 
         decltype(auto) operator[](this auto& self, std::string key)
@@ -310,7 +324,11 @@ namespace mc::nbt
 
         template<can_construct_nbt_tag T>
         named_tag(std::string name, T value)
-            : tag(std::move(value)), m_name(name) {}
+            : tag(std::move(value)), m_name(std::move(name)) {}
+
+        template<can_construct_nbt_tag T, typename ...Args>
+        named_tag(std::in_place_type_t<T> type_constructor, std::string name, Args&& ...args)
+            : tag(type_constructor, std::forward<Args>(args)...), m_name(std::move(name)) {}
 
         named_tag(const named_tag& other) = default;
 
@@ -322,11 +340,56 @@ namespace mc::nbt
 
         named_tag& operator= (named_tag&& other) = default;
 
-        std::string_view name()const { return m_name; }
+        template<can_construct_nbt_tag T>
+        operator const T&() const
+        {
+            return tag::operator const T&();
+        }
+
+        const std::string name()const { return m_name; }
 
     private:
         std::string m_name;
     };
+
+    /*------------ COMPOUND IMPLEMENTATION ------------*/
+
+    inline std::pair<compound::iterator, bool> compound::insert(const mapped_type& value)
+    {
+        return map_type::insert({std::string(value.name()), value});
+    }
+
+    inline std::pair<compound::iterator, bool> compound::insert(mapped_type&& value)
+    {
+        std::string name(value.name());
+        return map_type::insert({std::move(name), std::move(value)});
+    }
+
+    template<can_construct_nbt_tag T, typename ...Args >
+    std::pair<compound::iterator, bool> compound::emplace(std::string name, Args&&... args )
+    {
+        return map_type::emplace
+        (
+            std::piecewise_construct_t(),
+            std::tuple{std::move(name)},
+            std::tuple{std::in_place_type_t<T>(), std::forward<Args>(args)...}
+        );
+    }
+
+    template<can_construct_nbt_tag T, typename ...Args >
+    std::pair<compound::iterator, bool> compound::emplace(std::string_view name, Args&&... args )
+    {
+        return emplace<T>(std::string(name), std::forward<Args>(args)...);
+    }
+
+    inline const compound::mapped_type& compound::operator[](const std::string& name) const
+    {
+        return at(name);
+    }
+    inline const compound::mapped_type& compound::operator[](std::string&& name) const
+    {
+        return at(std::move(name));
+    }
 
     /*------------ LIST IMPLEMENTATION ------------*/
     inline list::list()
@@ -606,60 +669,11 @@ namespace mc::nbt
         return parse(f);
     }
 
-    template<typename T>
-    void serialize(std::vector<uint8_t>& buffer, T type)
-        requires std::same_as<T, Short> || std::same_as<T, Int>||
-        std::same_as<T, Long>
-    {
-        //std::byteswap(type) possibly needed
-        auto bytes = std::bit_cast<std::array<uint8_t, sizeof(T)>>(type);
-        buffer.append_range(bytes);
-    }
+    void serialize(std::vector<uint8_t>& buffer, const compound& compound);
+    void serialize(std::vector<uint8_t>& buffer, const list& list);
+    void serialize(std::vector<uint8_t>& buffer, const tag& tag);
+    void serialize(std::vector<uint8_t>& buffer, const named_tag& tag);
 
-    template<typename T>
-    void serialize(std::vector<uint8_t>& buffer, T type)
-        requires std::same_as<T, Float> || std::same_as<T, Double>
-    {
-        //std::byteswap(type) possibly needed
-        auto bytes = std::bit_cast<std::array<uint8_t, sizeof(T)>>(type);
-        buffer.append_range(bytes);
-    }
-
-    void serialize(std::vector<uint8_t>& buffer, std::byte b)
-    {
-        buffer.push_back(std::to_integer<uint>(b));
-    }
-
-    template<typename T>
-    void serialize(std::vector<uint8_t>& buffer, const Array<T>& array)
-        requires std::same_as<T, std::byte> || std::same_as<T, Int> || std::same_as<T, Long>
-    {
-        serialize(buffer, static_cast<Int>(array.size()));
-        for(const auto value : array)
-        {
-            serialize(buffer, value);
-        }
-    }
-
-    void serialize(std::vector<uint8_t>& buffer, const std::string& str)
-    {
-        serialize(buffer, static_cast<Short>(str.size()));
-        buffer.append_range(str);
-    }
-
-    void serialize(std::vector<uint8_t>& buffer, const list& str)
-    {
-
-    }
-
-    void serialize(std::vector<uint8_t>& buffer, const compound& str)
-    {
-    }
-
-    void serialize(std::vector<uint8_t>& buffer, const tag& str)
-    {
-
-    }
 
 } // namespace mc::NBT
 
@@ -718,7 +732,7 @@ struct std::formatter<mc::nbt::compound> : public std::formatter<std::string>
     template<typename FmtContext>
     FmtContext::iterator format(const mc::nbt::compound& obj, FmtContext& ctx) const
     {
-        return std::format_to(ctx.out(), "{}", static_cast<const std::unordered_map<std::string, mc::nbt::tag>&>(obj));
+        return std::format_to(ctx.out(), "{}", static_cast<const mc::nbt::map_type&>(obj));
     }
 };
 
@@ -735,42 +749,23 @@ struct std::formatter<mc::nbt::list> : public std::formatter<std::string>
 
 //SERIALIZERS
 
-
-
-template<>
-struct iu::Serializer<mc::nbt::list>
-{
-    void Serialize(std::vector<uint8_t>& buffer, const mc::nbt::list& object)
-    {
-    }
-};
-
-template<>
-struct iu::Serializer<mc::nbt::compound>
-{
-    Serializer(bool is_root)
-        : m_is_root(is_root) {}
-    void Serialize(std::vector<uint8_t>& buffer, const mc::nbt::compound& object)
-    {
-        for (const auto& [name, value] : object)
-        {
-            buffer.push_back(static_cast<uint8_t>(value.get_type()));
-            mc::nbt::serialize(buffer, name);
-            Serializer<mc::nbt::tag>().Serialize(buffer, value);
-        }
-    }
-private:
-    bool m_is_root;
-};
-
 template<>
 struct iu::Serializer<mc::nbt::tag>
 {
     //This should be called only with root tags
-    void Serialize(std::vector<uint8_t>& buffer, const mc::nbt::tag& object)
+    void Serialize(std::vector<uint8_t>& buffer, const mc::nbt::named_tag& object)
     {
         if (!object.is<mc::nbt::compound>())
-            throw nbt_error("root tag needs to be of type compund");
+            throw mc::nbt::nbt_error("Root object is not of type compound");
+        //network nbt skips name in root compound
+        mc::util::CharSerializer().Serialize(buffer, std::to_underlying(object.get_type()));
+
+        for(const auto& [key, value] : object.get_ref<mc::nbt::compound>())
+        {
+            serialize(buffer, value);
+        }
+
+        mc::util::CharSerializer().Serialize(buffer, std::to_underlying(mc::nbt::tag_type::END));
     }
 
 };

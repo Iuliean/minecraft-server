@@ -194,10 +194,11 @@ namespace mc
                 }
 
                 const auto& chunk = m_context.chunk_region[0][0].value();
-                const auto& world_surface = chunk->Get<NBT::NBTCompound>("Heightmaps")->Get<NBT::LongArray>("WORLD_SURFACE");
-                const auto& motion_blocking = chunk->Get<NBT::NBTCompound>("Heightmaps")->Get<NBT::LongArray>("MOTION_BLOCKING");
-                const auto& motion_blocking_no_leaves = chunk->Get<NBT::NBTCompound>("Heightmaps")->Get<NBT::LongArray>("MOTION_BLOCKING_NO_LEAVES");
-                const auto& sections = chunk->Get<NBT::NBTList>("sections");
+                const auto& world_surface = chunk["Heightmaps"]["WORLD_SURFACE"].get_ref<nbt::LongArray>();
+                const auto& motion_blocking = chunk["Heightmaps"]["MOTION_BLOCKING"].get_ref<nbt::LongArray>();
+                const auto& motion_blocking_no_leaves = chunk["Heightmaps"]["MOTION_BLOCKING_NO_LEAVES"].get_ref<nbt::LongArray>();
+                const auto& sections = chunk["sections"].get_ref<nbt::list>();
+
                 for (int i : std::views::iota(0,16))
                     for(int j : std::views::iota(0,16))
                 {
@@ -214,23 +215,23 @@ namespace mc
                     //world surface map
                     //type of map
                     util::writeVarInt(chunk_data, 1);
-                    util::writeVarInt(chunk_data, world_surface.Get().size());
-                    iu::Serializer<std::vector<NBT::Long>>().Serialize(chunk_data, world_surface.Get());
+                    util::writeVarInt(chunk_data, world_surface.size());
+                    iu::Serializer<std::vector<nbt::Long>>().Serialize(chunk_data, world_surface);
                     
                     //motion_blocking map
                     //type of map
                     util::writeVarInt(chunk_data, 4);
-                    util::writeVarInt(chunk_data, motion_blocking.Get().size());
-                    iu::Serializer<std::vector<NBT::Long>>().Serialize(chunk_data, motion_blocking.Get());
+                    util::writeVarInt(chunk_data, motion_blocking.size());
+                    iu::Serializer<std::vector<nbt::Long>>().Serialize(chunk_data, motion_blocking);
                 
                     //motion blocking no leaves map
                     //type of map
                     util::writeVarInt(chunk_data, 5);
-                    util::writeVarInt(chunk_data, motion_blocking_no_leaves.Get().size());
-                    iu::Serializer<std::vector<NBT::Long>>().Serialize(chunk_data, motion_blocking_no_leaves.Get());
+                    util::writeVarInt(chunk_data, motion_blocking_no_leaves.size());
+                    iu::Serializer<std::vector<nbt::Long>>().Serialize(chunk_data, motion_blocking_no_leaves);
                 
                     std::vector<uint8_t> chunk_section_data;
-                    for (auto it = sections->begin(); it != sections->end(); it++)
+                    for ([[maybe_unused]] const auto& section : sections)
                     {
                         //non air blocks
                         util::ShortSerializer().Serialize(chunk_section_data, 10000);
@@ -253,12 +254,12 @@ namespace mc
                     //Block entities
                     util::writeVarInt(chunk_data, 0);
                 
-                    BitSet sky_light_mask(sections->Size() + 2);
-                    BitSet block_light_mask(sections->Size() + 2);
-                    BitSet empty_sky_light_mask(sections->Size()+ 2);
-                    BitSet empty_block_light_mask(sections->Size() + 2);
+                    BitSet sky_light_mask(sections.size() + 2);
+                    BitSet block_light_mask(sections.size() + 2);
+                    BitSet empty_sky_light_mask(sections.size()+ 2);
+                    BitSet empty_block_light_mask(sections.size() + 2);
                 
-                    for (size_t idx : std::views::iota(0zu, sections->Size() + 2))
+                    for (size_t idx : std::views::iota(0zu, sections.size() + 2))
                     {
                         sky_light_mask.Set(idx, true);
                         block_light_mask.Set(idx, true);
@@ -270,15 +271,15 @@ namespace mc
                     BitSetSerializer().Serialize(chunk_data, empty_sky_light_mask);
                     BitSetSerializer().Serialize(chunk_data, empty_block_light_mask);
                 
-                    util::writeVarInt(chunk_data, sections->Size() + 2);
-                    for ([[maybe_unused]]size_t idx : std::views::iota(0zu, sections->Size() + 2))
+                    util::writeVarInt(chunk_data, sections.size() + 2);
+                    for ([[maybe_unused]]size_t idx : std::views::iota(0zu, sections.size() + 2))
                     {
                         util::writeVarInt(chunk_data, 2048);
                         iu::Serializer<std::vector<uint8_t>>().Serialize(chunk_data, std::ranges::to<std::vector<uint8_t>>(std::views::repeat(0xee, 2048)));
                     }
                 
-                    util::writeVarInt(chunk_data, sections->Size() + 2);
-                    for ([[maybe_unused]]size_t idx : std::views::iota(0zu, sections->Size() + 2))
+                    util::writeVarInt(chunk_data, sections.size() + 2);
+                    for ([[maybe_unused]]size_t idx : std::views::iota(0zu, sections.size() + 2))
                     {
                         util::writeVarInt(chunk_data, 2048);
                         iu::Serializer<std::vector<uint8_t>>().Serialize(chunk_data, std::ranges::to<std::vector<uint8_t>>(std::views::repeat(0xee, 2048)));

@@ -14,7 +14,6 @@
 #include <spdlog/fmt/fmt.h>
 #include <stdexcept>
 #include <ranges>
-#include <map>
 #include <string_view>
 #include <iterator>
 #include <type_traits>
@@ -140,16 +139,6 @@ namespace mc
 
         void toLower(std::string& s);
 
-        
-        template<std::integral T>
-        constexpr T byteswap(T value) noexcept
-        {
-            static_assert(std::has_unique_object_representations_v<T>, 
-                          "T may not have padding bits");
-            auto value_representation = std::bit_cast<std::array<std::byte, sizeof(T)>>(value);
-            std::ranges::reverse(value_representation);
-            return std::bit_cast<T>(value_representation);
-        }
     } // namespace util
 
 } // namespace mc
@@ -235,11 +224,11 @@ struct iu::Serializer<T>
 template<std::ranges::input_range R>
 struct iu::Serializer<R>
 {
-    void Serialzie(std::vector<uint8_t>& buffer, const R& range)
+    void Serialize(std::vector<uint8_t>& buffer, const R& range)
     {
         for (const auto& value : range)
         {
-            iu::Serializer<decltype(value)>().Serialize(buffer, value);
+            iu::Serializer<std::remove_cvref_t<decltype(value)>>().Serialize(buffer, value);
         }
     }
 };
@@ -277,9 +266,10 @@ struct iu::Serializer<std::variant<Args...>>
 };
 namespace mc::util
 {
-    using ByteSerialzier = iu::Serializer<std::byte>;
+    using ByteSerializer = iu::Serializer<std::byte>;
     using BoolSerializer = iu::Serializer<bool>;
     using CharSerializer = iu::Serializer<char>;
+    using UnsignedCharSerializer = iu::Serializer<unsigned char>;
     using ShortSerializer = iu::Serializer<std::uint16_t>;
     using IntSerializer  = iu::Serializer<std::int32_t>;
     using LongSerializer = iu::Serializer<std::int64_t>;

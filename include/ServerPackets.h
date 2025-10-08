@@ -384,7 +384,7 @@ struct iu::Serializer<mc::server::LoginPlayPacket>
 
         IntSerializer intSerializer;
         LongSerializer int64Serializer;
-        ByteSerializer byteSerialier;
+        UnsignedCharSerializer byteSerialier;
         BoolSerializer boolSerializer;
         Serializer<mc::Identifier> identifierSerializer;
         Serializer<mc::Position> positionSerializer;
@@ -437,7 +437,7 @@ struct iu::Serializer<mc::server::GameEvent>
 
         writeVarInt(buffer, GetSize(toSerialize));
         writeVarInt(buffer, toSerialize.GetId<int>());
-        ByteSerializer().Serialize(buffer, (std::uint8_t)toSerialize.m_event);
+        UnsignedCharSerializer().Serialize(buffer, (std::uint8_t)toSerialize.m_event);
         FloatSerializer().Serialize(buffer, toSerialize.m_value);
     }
 };
@@ -456,7 +456,7 @@ struct iu::Serializer<mc::server::SynchronisePlayerPosition>
         using namespace mc::util;
 
         writeVarInt(buffer, GetSize(toSerialize));
-        writeVarInt(buffer, toSerialize.GetId<mc::NBT::Int>());
+        writeVarInt(buffer, toSerialize.GetId<int>());
         writeVarInt(buffer, toSerialize.m_teleportID);
         DoubleSerializer().Serialize(buffer, toSerialize.m_x);
         DoubleSerializer().Serialize(buffer, toSerialize.m_y);

@@ -11,10 +11,88 @@
 namespace mc::nbt
 {
 
-    void serializeString(std::vector<std::uint8_t>& buffer, const std::string &data)
+    template<typename T>
+    void serialize(std::vector<uint8_t>& buffer, T type)
+        requires std::same_as<T, Short> || std::same_as<T, Int>||
+        std::same_as<T, Long>
     {
-        util::ShortSerializer().Serialize(buffer, data.size());
-        buffer.insert(buffer.end(), data.begin(), data.end());
+        //std::byteswap(type) possibly needed
+        auto bytes = std::bit_cast<std::array<uint8_t, sizeof(T)>>(type);
+        buffer.append_range(bytes);
+    }
+
+    template<typename T>
+    void serialize(std::vector<uint8_t>& buffer, T type)
+        requires std::same_as<T, Float> || std::same_as<T, Double>
+    {
+        //std::byteswap(type) possibly needed
+        auto bytes = std::bit_cast<std::array<uint8_t, sizeof(T)>>(type);
+        buffer.append_range(bytes);
+    }
+
+    void serialize(std::vector<uint8_t>& buffer, std::byte b)
+    {
+        buffer.push_back(std::to_integer<uint>(b));
+    }
+
+    template<typename T>
+    void serialize(std::vector<uint8_t>& buffer, const Array<T>& array)
+        requires std::same_as<T, std::byte> || std::same_as<T, Int> || std::same_as<T, Long>
+    {
+        serialize(buffer, static_cast<Int>(array.size()));
+        for(const auto value : array)
+        {
+            serialize(buffer, value);
+        }
+    }
+
+    void serialize(std::vector<uint8_t>& buffer, const std::string& str)
+    {
+        serialize(buffer, static_cast<Short>(str.size()));
+        buffer.append_range(str);
+    }
+
+    void serialize(std::vector<uint8_t>& buffer, tag_type type)
+    {
+        buffer.push_back(std::bit_cast<uint8_t>(type));
+    }
+
+    void serialize(std::vector<uint8_t>& buffer, const list& list)
+    {
+        serialize(buffer, list.get_list_type());
+        serialize(buffer, static_cast<int>(list.size()));
+
+        for (const auto& value : list)
+        {
+            serialize(buffer, value);
+        }
+        serialize(buffer, tag_type::END);
+    }
+
+    void serialize(std::vector<uint8_t>& buffer, const tag& tag)
+    {
+        std::visit([&buffer](auto&& value)
+        {
+            serialize(buffer, value);
+        },
+        tag.variant());
+    }
+
+    void serialize(std::vector<uint8_t>& buffer, const compound& compound)
+    {
+        for (const auto& [key, value] : compound)
+        {
+            serialize(buffer, value);
+        }
+
+        serialize(buffer, tag_type::END);
+    }
+    void serialize(std::vector<uint8_t>& buffer, const named_tag& tag)
+    {
+        serialize(buffer, tag.get_type());
+        serialize(buffer, tag.name());
+        serialize(buffer, static_cast<const class tag&>(tag));
+
     }
 
     /******************** Other ********************/
@@ -85,40 +163,42 @@ namespace mc::nbt
             switch(nextTag)
             {
                 case tag_type::BYTE:
-                    obj.emplace(tagName, parseNumeric<Byte>(data));
+                    obj.insert({std::move(tagName), parseNumeric<Byte>(data)});
                     break;
                 case tag_type::SHORT:
-                    obj.emplace(tagName, parseNumeric<Short>(data));
+                    obj.insert({std::move(tagName), parseNumeric<Short>(data)});
                     break;
                 case tag_type::INT:
-                    obj.emplace(tagName, parseNumeric<Int>(data));
+                    obj.insert({std::move(tagName), parseNumeric<Int>(data)});
                     break;
                 case tag_type::LONG:
-                    obj.emplace(tagName, parseNumeric<Long>(data));
+                    obj.insert({std::move(tagName), parseNumeric<Long>(data)});
                     break;
                 case tag_type::FLOAT:
-                    obj.emplace(tagName, parseFloat<Float>(data));
+                    obj.insert({std::move(tagName), parseFloat<Float>(data)});
                     break;
                 case tag_type::DOUBLE:
-                    obj.emplace(tagName, parseFloat<Double>(data));
+                    obj.insert({std::move(tagName), parseFloat<Double>(data)});
                     break;
                 case tag_type::BYTE_ARRAY:
-                    obj.emplace(tagName, parseArray<Byte>(data));
+                    obj.insert({std::move(tagName), parseArray<Byte>(data)});
                     break;
                 case tag_type::STRING:
-                    obj.emplace(tagName, parseString(data));
+                    obj.insert({std::move(tagName), parseString(data)});                
                     break;
                 case tag_type::LIST:
-                    obj.emplace(tagName, parseList(data));
+                    obj.insert({std::move(tagName), parseList(data)});
                     break;
                 case tag_type::COMPOUND:
-                    obj.emplace(tagName, parseCompound(data));
+                    obj.insert({std::move(tagName), parseCompound(data)});
                     break;
                 case tag_type::INT_ARRAY:
-                    obj.emplace(tagName, parseArray<Int>(data));
+                    obj.insert({std::move(tagName), parseArray<Int>(data)});
+
                     break;
                 case tag_type::LONG_ARRAY:
-                    obj.emplace(tagName, parseArray<Long>(data));
+                    obj.insert({std::move(tagName), parseArray<Long>(data)});
+
                     break;
                 default:
                     throw std::runtime_error("Unknown tag type" + std::to_string((int)nextTag));
@@ -199,7 +279,7 @@ namespace mc::nbt
         }
 
         std::string name = parseString(data);
-        nbt root(parseCompound(data));
+        nbt root(std::move(name), parseCompound(data));
 
         return root;
     }
