@@ -18,7 +18,7 @@ namespace mc
         using PropertyValue = std::variant<int, bool, std::string>;
         using PropertyMap = std::map<std::string, PropertyValue>;
         using Property = PropertyMap::value_type;
-        
+
         BlockState()=default;
         BlockState(Identifier blockIdentifier)
             : m_ID(std::move(blockIdentifier))
@@ -58,11 +58,11 @@ namespace std
 #else
             std::string hashedString = std::format("{}[{}]",blockState.GetID(), blockState.GetProperties());
             std::uint64_t hash = std::hash<std::string>()(hashedString);
-            return hash; 
+            return hash;
 #endif
         }
     };
-    
+
     template<>
     struct equal_to<mc::BlockState>
     {
