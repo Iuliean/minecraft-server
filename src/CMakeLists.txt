@@ -2,7 +2,6 @@ add_executable(${PROJECT_NAME}
     main.cpp
     MinecraftHandler.cpp
     PlayerHandler.cpp
-    ServerPackets.cpp
     Registry.cpp
     utils.cpp
     DataTypes/Identifier.cpp

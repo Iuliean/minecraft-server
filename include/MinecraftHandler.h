@@ -1,28 +1,31 @@
 #ifndef MINECRAFT_HANDLER_H
 #define MINECRAFT_HANDLER_H
-#include <SFW/LoggerManager.h>
 #include <SFW/ServerConnectionHandler.h>
 #include <SFW/Connection.h>
 
 #include <atomic>
-#include <array>
 
 #include "ServerContext.h"
+#include "server_state.hpp"
+#include "packet_dispatcher.hpp"
 namespace mc
 {
-    class MinecraftHanlder: public iu::ServerConnectionHandler
+
+    class MinecraftHanlder: public iu::ServerConnectionHandler, packet_dispatcher
     {
     public:
         MinecraftHanlder();
-        ~MinecraftHanlder()= default;
+        virtual ~MinecraftHanlder()= default;
 
         void HandleConnection(iu::Connection& connection)override;
         void OnConnected(iu::Connection& connection)override;
         void Stop()override;
-    private:
-        void BuildRegistryPackets();
+
     private:
 
+        void dispatch() override;
+
+        server_state m_state;
         ServerContext m_context;
         std::atomic_bool m_stop;
     };

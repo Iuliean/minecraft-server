@@ -1,4 +1,3 @@
-#include <bit>
 #include <concepts>
 #include <istream>
 #include <stdexcept>
@@ -6,7 +5,7 @@
 #include <utility>
 
 #include "DataTypes/nbt.h"
-#include "utils.h"
+#include "utils.hpp"
 
 namespace mc::nbt
 {
@@ -184,7 +183,7 @@ namespace mc::nbt
                     obj.insert({std::move(tagName), parseArray<Byte>(data)});
                     break;
                 case tag_type::STRING:
-                    obj.insert({std::move(tagName), parseString(data)});                
+                    obj.insert({std::move(tagName), parseString(data)});
                     break;
                 case tag_type::LIST:
                     obj.insert({std::move(tagName), parseList(data)});

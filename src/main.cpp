@@ -10,11 +10,11 @@ int main()
     iu::LoggerManager::LogFile("lastrun.log");
 #
     mc::BlockStateRegistry::Init("registries/blocks.json");
-    iu::AggregateServer<mc::MinecraftHanlder> server("0.0.0.0", 25565);
+    iu::DistributedServer<mc::MinecraftHanlder> server("0.0.0.0", 25565);
     std::thread serverThread([&server](){
         server.Run();
     });
-    char c = 'a'; 
+    char c = 'a';
     std::cin >> c;
 
     server.Stop();

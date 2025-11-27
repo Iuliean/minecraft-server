@@ -1,7 +1,6 @@
 #ifndef NBT_H
 #define NBT_H
 
-#include <bit>
 #include <concepts>
 #include <cstddef>
 #include <format>
@@ -12,7 +11,6 @@
 #include <string_view>
 #include <sys/types.h>
 #include <type_traits>
-#include <bits/stdint-uintn.h>
 #include <unordered_map>
 #include <cstdint>
 #include <string>
@@ -22,7 +20,8 @@
 #include <fstream>
 
 #include "SFW/Serializer.h"
-#include "utils.h"
+#include "utils.hpp"
+
 namespace mc::nbt
 {
     enum class tag_type : char

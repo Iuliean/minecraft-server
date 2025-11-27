@@ -1,30 +1,23 @@
 #include <SFW/LoggerManager.h>
 #include <SFW/Connection.h>
-#include <algorithm>
 #include <bit>
 #include <bits/stdint-uintn.h>
 #include <cstddef>
 #include <filesystem>
-#include <ios>
-#include <ranges>
 #include <string>
 #include <sys/types.h>
 #include <fstream>
 
 
 #include "MinecraftHandler.h"
-#include "PlayerHandler.h"
-#include "SFW/Serializer.h"
-#include "nlohmann/json.hpp"
-#include "DataTypes/Identifier.h"
+#include "ClientPackets.h"
 #include "DataTypes/nbt.h"
-#include "utils.h"
 #include "zstr.hpp"
 
 namespace mc
 {
 
-    namespace 
+    namespace
     {
         constexpr static int PACKET_SIZE = 10024;
         //Temporary hopefully
@@ -65,38 +58,41 @@ namespace mc
     }
 
     MinecraftHanlder::MinecraftHanlder()
-        : m_stop(false)
+        : ServerConnectionHandler(),
+          m_state(),
+          m_stop(false)
     {
-        BuildRegistryPackets();
         m_context.chunk_region = loadChunkRegion("map/r.0.0.mca");
     }
 
     void MinecraftHanlder::OnConnected(iu::Connection& connection)
     {
-        SFW_LOG_INFO("Handler", "New connection from: {}:{}", connection.GetAdress(), connection.GetPort());
+        SFW_LOG_INFO("MinecraftHandler", "New connection from: {}:{}", connection.GetAdress(), connection.GetPort());
     }
 
     void MinecraftHanlder::HandleConnection(iu::Connection &connection)
     {
-        PlayerHandler h(connection, m_context);
-        std::vector<uint8_t> data;
-        data.resize(PACKET_SIZE);
-        std::stringstream ss;
-        while(!m_stop)
+        try
         {
-            size_t recv = connection.Receive(data);
-            for(size_t i = 0; i < recv; ++i)
+            std::array<uint8_t, PACKET_SIZE> data;
+
+            const size_t recieved_size = connection.Receive(data);
+            if (recieved_size == 0)
             {
-                ss << std::hex << (int)data[i] << ", ";
+                SFW_LOG_INFO("MinecraftHandler", "No data received from {}:{}", connection.GetAdress(), connection.GetPort());
+                return;
             }
 
-            SFW_LOG_DEBUG("MinecraftHandler", "{}", ss.str());
-            ss.clear();
-            ss.str("");
-            if (recv == 0 )
-                return;
-            h.Execute(data);
         }
+        catch(const std::exception& e)
+        {
+            SFW_LOG_ERROR("MinecraftHandler", "Failed to handle connection: {}", e.what());
+        }
+    }
+
+    void MinecraftHanlder::dispatch()
+    {
+
     }
 
     void MinecraftHanlder::Stop()
@@ -104,20 +100,5 @@ namespace mc
         return;
     }
 
-    //Private
-
-    //These are semi hardcoded and inflexible for now in the name of progress
-    void MinecraftHanlder::BuildRegistryPackets()
-    {
-        SFW_LOG_INFO("MinecraftHandler", "Building registry packs");
-        for (const auto& [registry, packetFile] : std::ranges::views::zip(m_context.registry_packets, std::filesystem::directory_iterator("packets")))
-        {
-            SFW_LOG_DEBUG("MinecraftHandler", "Loading packet {}", packetFile.path().filename().string());
-            std::ifstream packet(packetFile.path(), std::ios::binary);
-            const size_t fileSize = packetFile.file_size();
-            registry.resize(fileSize);
-            packet.read(reinterpret_cast<char*>(registry.data()), fileSize);
-        }
-    }
 
 }

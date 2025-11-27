@@ -3,64 +3,64 @@
 
 #include <cstdint>
 
-#include "utils.h"
+#include "utils.hpp"
 namespace mc
 {
-    class Position
+    class position
     {
     public:
-        constexpr Position(std::int32_t x, std::int32_t z, std::int16_t y)
+        constexpr position(std::int32_t x, std::int32_t z, std::int16_t y)
         {
-            Assign(x, z, y);
+            assign(x, z, y);
         }
 
-        Position(Position& other)  = default;
-        Position(Position&& other) = default;
+        constexpr position(position& other)  = default;
+        constexpr position(position&& other) = default;
 
-        Position& operator=(Position& other) = default;
-        Position& operator=(Position&& other) = default;
+        constexpr position& operator=(position& other) = default;
+        constexpr position& operator=(position&& other) = default;
 
         // All gets here have to use shift operators.
         // https://wiki.vg/Protocol#Position
-        constexpr inline std::int32_t GetX() const noexcept
+        constexpr std::int32_t get_x() const noexcept
         {
             return m_positions >> 38;
         }
 
-        constexpr inline std::int32_t GetZ() const noexcept
+        constexpr std::int32_t get_z() const noexcept
         {
             return m_positions << 26 >> 38;
         }
 
-        constexpr inline std::int16_t GetY() const noexcept
+        constexpr std::int16_t get_y() const noexcept
         {
             return m_positions << 52 >> 52;
         }
 
-        constexpr inline std::int64_t Get() const noexcept
+        constexpr std::int64_t get() const noexcept
         {
             return m_positions;
         }
 
-        constexpr inline Position& SetX(std::int32_t x) noexcept
+        constexpr position& set_x(std::int32_t x) noexcept
         {
-            Assign(x, GetZ(), GetY());
+            assign(x, get_z(), get_y());
             return *this;
         }
 
-        constexpr inline Position& SetZ(std::int32_t z) noexcept
+        constexpr position& set_z(std::int32_t z) noexcept
         {
-            Assign(GetX(), z, GetY());
+            assign(get_x(), z, get_y());
             return *this;
         }
 
-        constexpr inline Position& SetY(std::int16_t y) noexcept
+        constexpr position& set_y(std::int16_t y) noexcept
         {
-            Assign(GetX(), GetZ(), y);
+            assign(get_x(), get_z(), y);
             return *this;
         }
 
-        constexpr inline void Assign(std::int32_t x, std::int32_t z, std::int16_t y)
+        constexpr inline void assign(std::int32_t x, std::int32_t z, std::int16_t y)
         {
             ASSERT(x <= 0x3FFFFFF, "X too big");
             ASSERT(z <= 0x3FFFFFF, "z too big");
@@ -71,12 +71,8 @@ namespace mc
                           (y & YBITS);
         }
 
-        inline std::string AsString() const
-        {
-            return std::format("X:{}, Z:{}, Y:{}", GetX(), GetZ(), GetY());
-        } 
-
     private:
+        friend std::formatter<mc::position>;
         // Top 26 bits of X
         constexpr static inline std::int32_t XBITS = 0x3FFFFFF;
         // Middle 26 bits of z
@@ -90,22 +86,22 @@ namespace mc
 
 
 template<>
-struct std::formatter<mc::Position> : public std::formatter<std::string>
+struct std::formatter<mc::position> : public std::formatter<std::string>
 {
     template<typename FmtContext>
-    FmtContext::iterator format(const mc::Position& my, format_context &ctx) const
+    FmtContext::iterator format(const mc::position& obj, format_context &ctx) const
     {
-        return std::format_to(ctx.out(), "{}", my.AsString());
+        return std::format_to(ctx.out(), "{:0b}", obj.get());
     }
 };
 
 template<>
-struct iu::Serializer<mc::Position>
+struct iu::Serializer<mc::position>
 {
-    void Serialize(std::vector<uint8_t>& buffer, const mc::Position& toSerialize)
-    {   
+    void Serialize(std::vector<uint8_t>& buffer, const mc::position& toSerialize)
+    {
         mc::util::LongSerializer serializer;
-        serializer.Serialize(buffer, toSerialize.Get());
+        serializer.Serialize(buffer, toSerialize.get());
     }
 };
 #endif
