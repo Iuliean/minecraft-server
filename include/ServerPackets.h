@@ -3,44 +3,45 @@
 
 #include "ClientPackets.h"
 #include "DataTypes/Identifier.h"
-#include "DataTypes/nbt.h"
-#include "Packet.h"
+#include "DataTypes/uuid.hpp"
+#include "packet.h"
 #include "DataTypes/Position.h"
 #include <nlohmann/json.hpp>
 #include "SFW/Serializer.h"
-#include "utils.h"
+#include "utils.hpp"
 
 #include <cstdint>
 #include <string>
 #include <unistd.h>
+#include <utility>
 namespace mc::server
 {
 
-    enum class IdlePacketID : int
+    enum class idle_packet_id : int
     {
         UNKNOWN = -1
     };
 
-    enum class StatusPacketID : int
+    enum class status_packet_id : int
     {
         UNKNOWN = -1,
         STATUS  = 0
     };
 
-    enum class LoginPacketID : int
+    enum class login_packet_id : int
     {
         UNKNOWN = -1,
         SUCCESS = 0x02
     };
 
-    enum class ConfigPacketID : int
+    enum class config_packet_id : int
     {
         UNKNOWN = -1,
         FinishConfiguration = 0x03,
         KnownPacks = 0x0E
     };
 
-    enum class PlayPacketID : int
+    enum class play_packet_id : int
     {
         UNKNOWN   = -1,
         GameEvent = 0x22,
@@ -52,51 +53,72 @@ namespace mc::server
     // * LoginPackets *
     // ****************
 
-    class LoginSuccessPacket : public Packet
+    class login_success_packet : public packet
     {
     public:
-        LoginSuccessPacket(const client::LoginStartPacket& packet);
+        login_success_packet(const client::login_start_packet& packet)
+            : mc::packet(login_packet_id::SUCCESS),
+              m_uuid(packet.get_uuid()),
+              m_name(packet.get_player_name()),
+              m_elements_count(0)
+        {}
+        virtual ~login_success_packet() = default;
 
-        inline util::uuid GetUUID() const { return m_uuid; }
-        inline const std::string GetName() const { return m_name; }
+        constexpr uuid get_uuid() const noexcept { return m_uuid; }
+        constexpr const std::string& get_name()const noexcept { return m_name; }
 
-        inline std::string AsString() const override
+        std::string as_string() const override
         {
-            return std::format("{{ name: {}, uuid: {}}}", m_name, m_uuid);
+            return std::format("name: {}, uuid: {}", m_name, m_uuid);
         }
 
-        inline constexpr std::string PacketName() const override { return "LoginSuccessPacket"; }
-        inline size_t Size() const override 
+        constexpr std::string packet_name() const override { return "login_success_packet"; }
+        size_t size() const override
         {
-            return sizeof(util::uuid) +
-            util::sizeOfString(m_name) +
-            util::sizeOfVarInt(m_numOfElements);
+            return packet::size() +
+                   sizeof(uuid) +
+                   util::sizeOfString(m_name) +
+                   util::sizeOfVarInt(m_elements_count);
         }
     private:
-        util::uuid m_uuid;
+        uuid m_uuid;
         std::string m_name;
-        util::varInt m_numOfElements;
+        util::varInt m_elements_count;
     };
 
     // *****************
     // * StatusPackets *
     // *****************
 
-    class StatusPacket : public Packet
+    class status_packet : public packet
     {
     public:
-        StatusPacket();
-        ~StatusPacket() = default;
+        status_packet()
+            : packet(status_packet_id::STATUS),
+              m_payload()
+        {
+            // FORMATED
+            m_payload = { { "version", { { "name", "1.21.8" }, { "protocol", 772 } } },
+                { "players",
+                    { { "max", 10 },
+                        { "online", 0 },
+                        { "sample",
+                            { { "name", "thinkofdeath" },
+                                { "id", "4566e69f-c907-48ee-8d71-d7ba5aa00d20" } } } } },
+                { "description",
+                    { { "text",
+                        "This is a shit implementation of an Mc server that doesn't even work" } } },
+                { "enforceSecureChat", true },
+                { "previewsChat", true } };
+        }
+        virtual ~status_packet() = default;
 
-        inline nlohmann::json& Json() { return m_payload; }
+        decltype(auto) json(this auto&& self) noexcept { return self.m_payload; }
 
-        inline const nlohmann::json& Json() const { return m_payload; }
+        std::string as_string() const override { return std::format("{}", m_payload); }
+        constexpr std::string packet_name() const override { return "status_packet"; }
 
-        inline std::string AsString() const override { return std::format("{}", m_payload); }
-
-        inline constexpr std::string PacketName() const override { return "StatusPacket"; }
-
-        inline size_t Size() const override { return 1 + util::sizeOfString(m_payload.dump());}
+        size_t size() const override { return packet::size() + util::sizeOfString(m_payload.dump());}
 
     private:
         nlohmann::json m_payload;
@@ -105,27 +127,51 @@ namespace mc::server
     // * ConfigPackets *
     // *****************
 
-    class KnownPacksPacket : public Packet
+    class known_packs : public packet
     {
     public:
-        KnownPacksPacket(std::string nspace, std::string id, std::string version);
-        ~KnownPacksPacket() = default;
+        known_packs(std::string nspace, std::string id, std::string version)
+        : packet(std::to_underlying(config_packet_id::KnownPacks)),
+          m_namespace(std::move(nspace)),
+          m_id(std::move(id)),
+          m_version(std::move(version))
+        {
+        }
+        virtual ~known_packs() = default;
+
+        std::string as_string()const override
+        {
+            return std::format("namespace:{}, id:{}, version:{}", m_namespace, m_id, m_version);
+        }
+
+        constexpr std::string packet_name()const override { return "known_packs"; }
+
+        size_t size()const override
+        {
+            return packet::size() +
+                   util::sizeOfString(m_namespace) +
+                   util::sizeOfString(m_id) +
+                   util::sizeOfString(m_version);
+        }
     private:
-        friend iu::Serializer<KnownPacksPacket>;
+        friend iu::Serializer<known_packs>;
         std::string m_namespace;
         std::string m_id;
         std::string m_version;
     };
 
-    class FinishConfiguration : public Packet
+    class finish_config : public packet
     {
     public:
-        FinishConfiguration();
-        ~FinishConfiguration() = default;
+        finish_config()
+            : packet(config_packet_id::FinishConfiguration)
+        {
+        }
+        virtual ~finish_config() = default;
 
-        inline std::string AsString() const override { return std::format("FinishConfig");}
-        inline constexpr std::string PacketName() const override { return "FinishConfiguration";}
-        inline size_t Size() const override { return 1;}
+        std::string as_string() const override { return ""; }
+        constexpr std::string packet_name() const override { return "finish_config";}
+        size_t size() const override { return packet::size();}
     };
 
 
@@ -133,113 +179,140 @@ namespace mc::server
     // * PlayPackets *
     // ****************
 
-    class LoginPlayPacket : public Packet
+    class login_play_packet : public packet
     {
     public:
-        LoginPlayPacket();
-
-        inline std::string AsString() const override
+        login_play_packet()
+        : mc::packet(play_packet_id::LoginPlay),
+          m_entity_id(243645754),
+          m_is_hardcore(false),
+          m_dimension_identifiers({Identifier("overworld"), Identifier("nether")}),
+          m_max_players(32),
+          m_view_distance(16),
+          m_simulation_distance(16),
+          m_reduced_debug_info(false),
+          m_enable_respawn_screen(true),
+          m_limited_crafting(false),
+          m_dimention_type(0),
+          m_dimension_name(Identifier("overworld")),
+          m_seed_hash(12312312),
+          m_game_mode(1),
+          m_previous_game_mode(-1),
+          m_is_debug(false),
+          m_is_flat(false),
+          m_has_death_location(false),
+          m_death_dimenstion(),
+          m_death_position(),
+          m_portal_cooldown(1),
+          m_sea_level(100),
+          m_enforce_secure_chat(false)
         {
-            constexpr const char* const text = "EntityID:{}, "
-                                               "isHardcore:{}, "
-                                               "maxPlayers:{}, "
-                                               "viewDistance:{}, "
-                                               "simulationDistance:{}, "
-                                               "reducedDebugInfo:{}, "
-                                               "enableRespawnScreen:{}, "
-                                               "limitedCrafting:{}, "
-                                               "seedHash:{}, "
-                                               "gameMode:{}, "
-                                               "previousGameMode:{}, "
-                                               "isDebug:{}, "
-                                               "isFlat:{}, "
-                                               "hasDeathLocation:{}, "
-                                               "portalCooldown:{}"
-                                               "seaLevel:{}";
+        }
+        virtual ~login_play_packet() = default;
+
+        std::string as_string() const override
+        {
+            constexpr const char* const text =
+                "EntityID:{}, "
+                "isHardcore:{}, "
+                "maxPlayers:{}, "
+                "viewDistance:{}, "
+                "simulationDistance:{}, "
+                "reducedDebugInfo:{}, "
+                "enableRespawnScreen:{}, "
+                "limitedCrafting:{}, "
+                "seedHash:{}, "
+                "gameMode:{}, "
+                "previousGameMode:{}, "
+                "isDebug:{}, "
+                "isFlat:{}, "
+                "hasDeathLocation:{}, "
+                "portalCooldown:{}"
+                "seaLevel:{}";
             return std::format(text,
-                m_entityID,
-                m_isHardcore,
-                m_maxPlayers,
-                m_viewDistance,
-                m_simulationDistance,
-                m_reducedDebugInfo,
-                m_enableRespawnScreen,
-                m_limitedCrafting,
-                m_seedHash,
-                m_gameMode,
-                m_previousGameMode,
-                m_isDebug,
-                m_isFlat,
-                m_hasDeathLocation,
-                m_seaLevel,
-                m_portalCooldown);
+                m_entity_id,
+                m_is_hardcore,
+                m_max_players,
+                m_view_distance,
+                m_simulation_distance,
+                m_reduced_debug_info,
+                m_enable_respawn_screen,
+                m_limited_crafting,
+                m_seed_hash,
+                m_game_mode,
+                m_previous_game_mode,
+                m_is_debug,
+                m_is_flat,
+                m_has_death_location,
+                m_sea_level,
+                m_portal_cooldown);
         }
 
-        inline constexpr std::string PacketName() const override { return "LoginPlay"; }
-        inline size_t Size() const override
+        constexpr std::string packet_name() const override { return "login_play"; }
+        size_t size() const override
         {
             const size_t deathLocationSize =
-                m_hasDeathLocation ? (util::sizeOfString(m_deathDimension->AsString()) + sizeof(*m_deathDimension)) : 0;
+                m_has_death_location ? (util::sizeOfString(m_death_dimenstion->AsString()) + sizeof(*m_death_dimenstion)) : 0;
 
-            size_t idendtifiers_size = util::sizeOfVarInt(m_dimensionIdentifiers.size());
-            for (const auto& identifier: m_dimensionIdentifiers)
+            size_t idendtifiers_size = util::sizeOfVarInt(m_dimension_identifiers.size());
+            for (const auto& identifier: m_dimension_identifiers)
                 idendtifiers_size += util::sizeOfString(identifier.AsString());
 
-            return 1 + //ID
-                sizeof(m_entityID) +
-                sizeof(m_isHardcore) +
+            return packet::size() + //ID
+                sizeof(m_entity_id) +
+                sizeof(m_is_hardcore) +
                 idendtifiers_size +
-                util::sizeOfVarInt(m_maxPlayers) +
-                util::sizeOfVarInt(m_viewDistance) +
-                util::sizeOfVarInt(m_simulationDistance) +
-                sizeof(m_reducedDebugInfo) +
-                sizeof(m_enableRespawnScreen) +
-                sizeof(m_limitedCrafting) +
-                util::sizeOfVarInt(m_dimensionType) +
-                util::sizeOfString(m_dimensionName.AsString()) +
-                sizeof(m_seedHash) +
-                sizeof(m_gameMode) +
-                sizeof(m_previousGameMode) +
-                sizeof(m_isDebug) +
-                sizeof(m_isFlat) +
-                sizeof(m_hasDeathLocation) +
+                util::sizeOfVarInt(m_max_players) +
+                util::sizeOfVarInt(m_view_distance) +
+                util::sizeOfVarInt(m_simulation_distance) +
+                sizeof(m_reduced_debug_info) +
+                sizeof(m_enable_respawn_screen) +
+                sizeof(m_limited_crafting) +
+                util::sizeOfVarInt(m_dimention_type) +
+                util::sizeOfString(m_dimension_name.AsString()) +
+                sizeof(m_seed_hash) +
+                sizeof(m_game_mode) +
+                sizeof(m_previous_game_mode) +
+                sizeof(m_is_debug) +
+                sizeof(m_is_flat) +
+                sizeof(m_has_death_location) +
                 deathLocationSize +
-                util::sizeOfVarInt(m_portalCooldown) +
-                util::sizeOfVarInt(m_seaLevel) +
-                sizeof(m_enforceSecureChat);
+                util::sizeOfVarInt(m_portal_cooldown) +
+                util::sizeOfVarInt(m_sea_level) +
+                sizeof(m_enforce_secure_chat);
         }
 
     private:
-        friend iu::Serializer<mc::server::LoginPlayPacket>;
+        friend iu::Serializer<mc::server::login_play_packet>;
 
-        int32_t m_entityID;
-        bool m_isHardcore;
-        std::vector<mc::Identifier> m_dimensionIdentifiers;
-        util::varInt m_maxPlayers;
-        util::varInt m_viewDistance;
-        util::varInt m_simulationDistance;
-        bool m_reducedDebugInfo;
-        bool m_enableRespawnScreen;
-        bool m_limitedCrafting;
-        util::varInt m_dimensionType;
-        Identifier m_dimensionName;
-        int64_t m_seedHash;
-        uint8_t m_gameMode;
-        int8_t m_previousGameMode;
-        bool m_isDebug;
-        bool m_isFlat;
-        bool m_hasDeathLocation;
-        std::optional<Identifier> m_deathDimension;
-        std::optional<Position> m_deathPosition;
-        util::varInt m_portalCooldown;
-        util::varInt m_seaLevel;
-        bool m_enforceSecureChat;
+        int32_t m_entity_id;
+        bool m_is_hardcore;
+        std::vector<mc::Identifier> m_dimension_identifiers;
+        util::varInt m_max_players;
+        util::varInt m_view_distance;
+        util::varInt m_simulation_distance;
+        bool m_reduced_debug_info;
+        bool m_enable_respawn_screen;
+        bool m_limited_crafting;
+        util::varInt m_dimention_type;
+        Identifier m_dimension_name;
+        int64_t m_seed_hash;
+        uint8_t m_game_mode;
+        int8_t m_previous_game_mode;
+        bool m_is_debug;
+        bool m_is_flat;
+        bool m_has_death_location;
+        std::optional<Identifier> m_death_dimenstion;
+        std::optional<position> m_death_position;
+        util::varInt m_portal_cooldown;
+        util::varInt m_sea_level;
+        bool m_enforce_secure_chat;
     };
 
-    class GameEvent : public Packet
+    class game_event : public packet
     {
     public:
-        enum class Event : std::uint8_t
+        enum class event : std::uint8_t
         {
             NoRespawnBlockAvailable = 0,
             BeginRaining,
@@ -256,22 +329,22 @@ namespace mc::server
             LimitedCrafting,
             StartWaitingForChunks
         };
-        GameEvent(Event event, float value = 0);
-        ~GameEvent() = default;
+        game_event(event event, float value = 0);
+        virtual ~game_event() = default;
 
-        inline std::string AsString() const override { return std::format("GameEvent{{ Event: {}, Value: {}}}", (int)m_event, m_value);}
-        inline constexpr std::string PacketName() const override { return "GameEvent";}
-        inline size_t Size() const override { return 1 + sizeof(Event) + sizeof(float);}
+        std::string as_string() const override { return std::format("Event: {}, Value: {}", std::to_underlying(m_event), m_value); }
+        constexpr std::string packet_name() const override { return "game_event"; }
+        constexpr size_t size() const override { return packet::size() + sizeof(event) + sizeof(float); }
     private:
-        friend iu::Serializer<mc::server::GameEvent>;
-        Event m_event;
+        friend iu::Serializer<mc::server::game_event>;
+        event m_event;
         float m_value; //depends on event
     };
 
-    class SynchronisePlayerPosition : public Packet
+    class sync_player_position : public packet
     {
     public:
-        SynchronisePlayerPosition(
+        sync_player_position(
             util::varInt teleportID,
             double x,
             double y,
@@ -283,26 +356,24 @@ namespace mc::server
             float pitch,
             int relativeMask
         );
-        ~SynchronisePlayerPosition() = default;
+        virtual ~sync_player_position() = default;
 
-        inline std::string AsString() const override
+        std::string as_string() const override
         {
-            constexpr auto fmt = 
-                "{}:"
+            constexpr auto fmt =
                 "X: {}, Y: {}, Z: {}, Yaw: {}, Pitch: {},"
                 "RelativeMask:{:b}, TeleportID: {}";
             return std::format(fmt,
-                PacketName(),
                 m_x, m_y, m_z, m_yaw, m_pitch,
-                m_relativeMask, m_teleportID
+                m_relative_mask, m_teleport_id
             );
         }
 
-        inline constexpr std::string PacketName() const override { return "SynchronisePlayerPosition"; }
-        inline size_t Size() const override
+        constexpr std::string packet_name() const override { return "sync_player_position"; }
+        size_t size() const override
         {
-            return 1 + //ID
-                   util::sizeOfVarInt(m_teleportID) +
+            return packet::size() + //ID
+                   util::sizeOfVarInt(m_teleport_id) +
                    sizeof(m_x) +
                    sizeof(m_y) +
                    sizeof(m_z) +
@@ -311,12 +382,12 @@ namespace mc::server
                    sizeof(m_velocity_z) +
                    sizeof(m_yaw) +
                    sizeof(m_pitch) +
-                   sizeof(m_relativeMask);
+                   sizeof(m_relative_mask);
         }
     private:
-        friend iu::Serializer<mc::server::SynchronisePlayerPosition>;
+        friend iu::Serializer<mc::server::sync_player_position>;
 
-        util::varInt m_teleportID;
+        util::varInt m_teleport_id;
 
         double m_x;
         double m_y;
@@ -329,56 +400,56 @@ namespace mc::server
         float m_yaw;
         float m_pitch;
 
-        int m_relativeMask;
+        int m_relative_mask;
     };
 
 } // namespace mc::server
 
 template<>
-struct iu::Serializer<mc::server::LoginSuccessPacket>
+struct iu::Serializer<mc::server::login_success_packet>
 {
-    void Serialize(std::vector<uint8_t>& buffer, const mc::server::LoginSuccessPacket& toSerialize)
+    void Serialize(std::vector<uint8_t>& buffer, const mc::server::login_success_packet& toSerialize)
     {
         using namespace mc::util;
-        Serializer<uuid> uuidSerializer;
+        iu::Serializer<mc::uuid> uuidSerializer;
 
-        writeVarInt(buffer, toSerialize.Size() + 1);
-        writeVarInt(buffer, toSerialize.GetId<int>());
-        uuidSerializer.Serialize(buffer, toSerialize.GetUUID());
-        writeStringToBuff(buffer, toSerialize.GetName());
+        writeVarInt(buffer, toSerialize.size());
+        writeVarInt(buffer, toSerialize.get_id<int>());
+        uuidSerializer.Serialize(buffer, toSerialize.get_uuid());
+        writeStringToBuff(buffer, toSerialize.get_name());
         writeVarInt(buffer, 0);
     }
 };
 
 template<>
-struct iu::Serializer<mc::server::StatusPacket>
+struct iu::Serializer<mc::server::status_packet>
 {
-    void Serialize(std::vector<uint8_t>& buffer, const mc::server::StatusPacket& toSerialize)
+    void Serialize(std::vector<uint8_t>& buffer, const mc::server::status_packet& toSerialize)
     {
         using namespace mc::util;
-        writeVarInt(buffer, toSerialize.Size());
-        writeVarInt(buffer, toSerialize.GetId<int>());
-        writeStringToBuff(buffer, toSerialize.Json().dump());
+        writeVarInt(buffer, toSerialize.size());
+        writeVarInt(buffer, toSerialize.get_id<int>());
+        writeStringToBuff(buffer, toSerialize.json().dump());
     }
 };
 
 template<>
-struct iu::Serializer<mc::server::FinishConfiguration>
+struct iu::Serializer<mc::server::finish_config>
 {
-    void Serialize(std::vector<uint8_t>& buffer, const mc::server::FinishConfiguration& toSerialize)
+    void Serialize(std::vector<uint8_t>& buffer, const mc::server::finish_config& toSerialize)
     {
         using namespace mc::util;
-        writeVarInt(buffer, toSerialize.Size());
-        writeVarInt(buffer, toSerialize.GetId<int>());
+        writeVarInt(buffer, toSerialize.size());
+        writeVarInt(buffer, toSerialize.get_id<int>());
     }
 };
 
 template<>
-struct iu::Serializer<mc::server::LoginPlayPacket>
+struct iu::Serializer<mc::server::login_play_packet>
 {
-    size_t GetSize(const mc::server::LoginPlayPacket& object) { return object.Size();}
+    size_t GetSize(const mc::server::login_play_packet& object) { return object.size();}
 
-    void Serialize(std::vector<uint8_t>& buffer, const mc::server::LoginPlayPacket& toSerialize)
+    void Serialize(std::vector<uint8_t>& buffer, const mc::server::login_play_packet& toSerialize)
     {
         using namespace mc::util;
 
@@ -387,56 +458,56 @@ struct iu::Serializer<mc::server::LoginPlayPacket>
         UnsignedCharSerializer byteSerialier;
         BoolSerializer boolSerializer;
         Serializer<mc::Identifier> identifierSerializer;
-        Serializer<mc::Position> positionSerializer;
+        Serializer<mc::position> positionSerializer;
         Serializer<std::vector<mc::Identifier>> identifierVecSerializer;
 
-        writeVarInt(buffer, toSerialize.Size());
-        writeVarInt(buffer, toSerialize.GetId<int>());
-        intSerializer.Serialize(buffer, toSerialize.m_entityID);
-        boolSerializer.Serialize(buffer, toSerialize.m_isHardcore);
-        writeVarInt(buffer, toSerialize.m_dimensionIdentifiers.size());
-        identifierVecSerializer.Serialize(buffer, toSerialize.m_dimensionIdentifiers);
-        writeVarInt(buffer, toSerialize.m_maxPlayers);
-        writeVarInt(buffer, toSerialize.m_viewDistance);
-        writeVarInt(buffer, toSerialize.m_simulationDistance);
-        boolSerializer.Serialize(buffer, toSerialize.m_reducedDebugInfo);
-        boolSerializer.Serialize(buffer, toSerialize.m_enableRespawnScreen);
-        boolSerializer.Serialize(buffer, toSerialize.m_limitedCrafting);
-        writeVarInt(buffer, toSerialize.m_dimensionType);
-        identifierSerializer.Serialize(buffer, toSerialize.m_dimensionName);
-        int64Serializer.Serialize(buffer, toSerialize.m_seedHash);
-        byteSerialier.Serialize(buffer, toSerialize.m_gameMode);
-        byteSerialier.Serialize(buffer, toSerialize.m_previousGameMode);
-        boolSerializer.Serialize(buffer, toSerialize.m_isDebug);
-        boolSerializer.Serialize(buffer, toSerialize.m_isFlat);
-        boolSerializer.Serialize(buffer, toSerialize.m_deathDimension.has_value() && toSerialize.m_deathPosition.has_value());
+        writeVarInt(buffer, toSerialize.size());
+        writeVarInt(buffer, toSerialize.get_id<int>());
+        intSerializer.Serialize(buffer, toSerialize.m_entity_id);
+        boolSerializer.Serialize(buffer, toSerialize.m_is_hardcore);
+        writeVarInt(buffer, toSerialize.m_dimension_identifiers.size());
+        identifierVecSerializer.Serialize(buffer, toSerialize.m_dimension_identifiers);
+        writeVarInt(buffer, toSerialize.m_max_players);
+        writeVarInt(buffer, toSerialize.m_view_distance);
+        writeVarInt(buffer, toSerialize.m_simulation_distance);
+        boolSerializer.Serialize(buffer, toSerialize.m_reduced_debug_info);
+        boolSerializer.Serialize(buffer, toSerialize.m_enable_respawn_screen);
+        boolSerializer.Serialize(buffer, toSerialize.m_limited_crafting);
+        writeVarInt(buffer, toSerialize.m_dimention_type);
+        identifierSerializer.Serialize(buffer, toSerialize.m_dimension_name);
+        int64Serializer.Serialize(buffer, toSerialize.m_seed_hash);
+        byteSerialier.Serialize(buffer, toSerialize.m_game_mode);
+        byteSerialier.Serialize(buffer, toSerialize.m_previous_game_mode);
+        boolSerializer.Serialize(buffer, toSerialize.m_is_debug);
+        boolSerializer.Serialize(buffer, toSerialize.m_is_flat);
+        boolSerializer.Serialize(buffer, toSerialize.m_death_dimenstion.has_value() && toSerialize.m_death_position.has_value());
 
-        if(toSerialize.m_deathDimension.has_value() && toSerialize.m_deathPosition.has_value())
+        if(toSerialize.m_death_dimenstion.has_value() && toSerialize.m_death_position.has_value())
         {
-            identifierSerializer.Serialize(buffer, toSerialize.m_deathDimension.value().AsString());
-            positionSerializer.Serialize(buffer, toSerialize.m_deathPosition.value());
+            identifierSerializer.Serialize(buffer, toSerialize.m_death_dimenstion.value().AsString());
+            positionSerializer.Serialize(buffer, toSerialize.m_death_position.value());
         }
 
-        writeVarInt(buffer, toSerialize.m_portalCooldown);
-        writeVarInt(buffer, toSerialize.m_seaLevel);
-        boolSerializer.Serialize(buffer, toSerialize.m_enforceSecureChat);
+        writeVarInt(buffer, toSerialize.m_portal_cooldown);
+        writeVarInt(buffer, toSerialize.m_sea_level);
+        boolSerializer.Serialize(buffer, toSerialize.m_enforce_secure_chat);
     }
 };
 
 template<>
-struct iu::Serializer<mc::server::GameEvent>
+struct iu::Serializer<mc::server::game_event>
 {
-    size_t GetSize(const mc::server::GameEvent& object)
+    size_t GetSize(const mc::server::game_event& object)
     {
-        return object.Size();
+        return object.size();
     }
 
-    void Serialize(std::vector<uint8_t>& buffer, const mc::server::GameEvent& toSerialize)
+    void Serialize(std::vector<uint8_t>& buffer, const mc::server::game_event& toSerialize)
     {
         using namespace mc::util;
 
         writeVarInt(buffer, GetSize(toSerialize));
-        writeVarInt(buffer, toSerialize.GetId<int>());
+        writeVarInt(buffer, toSerialize.get_id<int>());
         UnsignedCharSerializer().Serialize(buffer, (std::uint8_t)toSerialize.m_event);
         FloatSerializer().Serialize(buffer, toSerialize.m_value);
     }
@@ -444,20 +515,20 @@ struct iu::Serializer<mc::server::GameEvent>
 
 
 template<>
-struct iu::Serializer<mc::server::SynchronisePlayerPosition>
+struct iu::Serializer<mc::server::sync_player_position>
 {
-    size_t GetSize(const mc::server::SynchronisePlayerPosition& object)
+    size_t GetSize(const mc::server::sync_player_position& object)
     {
-        return object.Size();
+        return object.size();
     }
 
-    void Serialize(std::vector<uint8_t>& buffer, const mc::server::SynchronisePlayerPosition& toSerialize)
+    void Serialize(std::vector<uint8_t>& buffer, const mc::server::sync_player_position& toSerialize)
     {
         using namespace mc::util;
 
         writeVarInt(buffer, GetSize(toSerialize));
-        writeVarInt(buffer, toSerialize.GetId<int>());
-        writeVarInt(buffer, toSerialize.m_teleportID);
+        writeVarInt(buffer, toSerialize.get_id<int>());
+        writeVarInt(buffer, toSerialize.m_teleport_id);
         DoubleSerializer().Serialize(buffer, toSerialize.m_x);
         DoubleSerializer().Serialize(buffer, toSerialize.m_y);
         DoubleSerializer().Serialize(buffer, toSerialize.m_z);
@@ -466,14 +537,14 @@ struct iu::Serializer<mc::server::SynchronisePlayerPosition>
         DoubleSerializer().Serialize(buffer, toSerialize.m_velocity_z);
         FloatSerializer().Serialize(buffer, toSerialize.m_yaw);
         FloatSerializer().Serialize(buffer, toSerialize.m_pitch);
-        IntSerializer().Serialize(buffer, toSerialize.m_relativeMask);
+        IntSerializer().Serialize(buffer, toSerialize.m_relative_mask);
     }
 };
 
 template<>
-struct iu::Serializer<mc::server::KnownPacksPacket>
+struct iu::Serializer<mc::server::known_packs>
 {
-    void Serialize(std::vector<uint8_t>& buffer, const mc::server::KnownPacksPacket& toSerialize)
+    void Serialize(std::vector<uint8_t>& buffer, const mc::server::known_packs& toSerialize)
     {
         using namespace mc::util;
         const int packetSize = 2 +
@@ -482,7 +553,7 @@ struct iu::Serializer<mc::server::KnownPacksPacket>
                                   sizeOfString(toSerialize.m_version);
 
         writeVarInt(buffer, packetSize);
-        writeVarInt(buffer, toSerialize.GetId<int>());
+        writeVarInt(buffer, toSerialize.get_id<int>());
         writeVarInt(buffer, 1);
         writeStringToBuff(buffer, toSerialize.m_namespace);
         writeStringToBuff(buffer, toSerialize.m_id);
