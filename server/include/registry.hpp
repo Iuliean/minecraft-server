@@ -1,7 +1,7 @@
-#ifndef REGITSTRY_H
-#define REGITSTRY_H
+#ifndef REGITSTRY_HPP
+#define REGITSTRY_HPP
 
-#include "BlockState.h"
+#include "block_state.hpp"
 #include "SFW/utils.h"
 #include <filesystem>
 #include <memory>

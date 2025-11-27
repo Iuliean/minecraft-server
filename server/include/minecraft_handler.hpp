@@ -1,11 +1,11 @@
-#ifndef MINECRAFT_HANDLER_H
-#define MINECRAFT_HANDLER_H
+#ifndef MINECRAFT_HANDLER_HPP
+#define MINECRAFT_HANDLER_HPP
 #include <SFW/ServerConnectionHandler.h>
 #include <SFW/Connection.h>
 
 #include <atomic>
 
-#include "ServerContext.h"
+#include "server_context.hpp"
 #include "server_state.hpp"
 #include "packet_dispatcher.hpp"
 namespace mc

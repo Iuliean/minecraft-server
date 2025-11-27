@@ -1,7 +1,6 @@
 #include <SFW/LoggerManager.h>
 #include <SFW/Connection.h>
 #include <bit>
-#include <bits/stdint-uintn.h>
 #include <cstddef>
 #include <filesystem>
 #include <string>
@@ -9,9 +8,9 @@
 #include <fstream>
 
 
-#include "MinecraftHandler.h"
-#include "ClientPackets.h"
-#include "DataTypes/nbt.h"
+#include "minecraft_handler.hpp"
+#include "client_packets.hpp"
+#include "data_types/nbt.hpp"
 #include "zstr.hpp"
 
 namespace mc

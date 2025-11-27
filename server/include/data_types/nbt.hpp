@@ -1,5 +1,5 @@
-#ifndef NBT_H
-#define NBT_H
+#ifndef NBT_HPP
+#define NBT_HPP
 
 #include <concepts>
 #include <cstddef>

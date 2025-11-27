@@ -1,11 +1,11 @@
-#ifndef SERVER_PACKETS_H
-#define SERVER_PACKETS_H
+#ifndef SERVER_PACKETS_HPP
+#define SERVER_PACKETS_HPP
 
-#include "ClientPackets.h"
-#include "DataTypes/Identifier.h"
-#include "DataTypes/uuid.hpp"
-#include "packet.h"
-#include "DataTypes/Position.h"
+#include "client_packets.hpp"
+#include "data_types/identifier.hpp"
+#include "data_types/uuid.hpp"
+#include "packet.hpp"
+#include "data_types/position.hpp"
 #include <nlohmann/json.hpp>
 #include "SFW/Serializer.h"
 #include "utils.hpp"

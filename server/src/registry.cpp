@@ -1,6 +1,6 @@
-#include "Registry.h"
-#include "BlockState.h"
-#include "DataTypes/Identifier.h"
+#include "registry.hpp"
+#include "block_state.hpp"
+#include "data_types/identifier.hpp"
 #include "SFW/LoggerManager.h"
 #include "SFW/utils.h"
 #include <filesystem>

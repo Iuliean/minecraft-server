@@ -1,8 +1,8 @@
-#ifndef CLIENT_PACKETS_H
-#define CLIENT_PACKETS_H
-#include "packet.h"
+#ifndef CLIENT_PACKETS_HPP
+#define CLIENT_PACKETS_HPP
+#include "packet.hpp"
 #include "utils.hpp"
-#include "DataTypes/uuid.hpp"
+#include "data_types/uuid.hpp"
 
 #include <string>
 

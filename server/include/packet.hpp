@@ -1,5 +1,5 @@
-#ifndef PACKET_H
-#define PACKET_H
+#ifndef PACKET_HPP
+#define PACKET_HPP
 
 #include <concepts>
 #include <spdlog/fmt/fmt.h>

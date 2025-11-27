@@ -1,6 +1,6 @@
 #ifndef PACKET_PARSER_HPP
 #define PACKET_PARSER_HPP
-#include "ClientPackets.h"
+#include "client_packets.hpp"
 #include "packet.h"
 #include <cstdint>
 

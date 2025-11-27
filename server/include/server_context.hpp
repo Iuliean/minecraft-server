@@ -1,9 +1,9 @@
-#ifndef SERVER_CONTEXT_H
-#define SERVER_CONTEXT_H
+#ifndef SERVER_CONTEXT_HPP
+#define SERVER_CONTEXT_HPP
 #include <vector>
 #include <array>
 #include <stdint.h>
-#include "DataTypes/nbt.h"
+#include "data_types/nbt.hpp"
 
 
 namespace mc

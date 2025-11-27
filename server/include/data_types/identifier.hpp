@@ -1,5 +1,5 @@
-#ifndef IDENTIFIER_H
-#define IDENTIFIER_H
+#ifndef IDENTIFIER_HPP
+#define IDENTIFIER_HPP
 #include <string>
 #include <regex>
 

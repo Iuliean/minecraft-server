@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "t_nbt.h"
+#include "t_nbt.hpp"
 
 int main(int argc, char** argv)
 {

@@ -9,18 +9,17 @@
 #include <algorithm>
 #include <vector>
 
-#include "BlockState.h"
-#include "ClientPackets.h"
-#include "PlayerHandler.h"
-#include "DataTypes/BitSet.h"
-#include "DataTypes/Identifier.h"
-#include "DataTypes/nbt.h"
-#include "Registry.h"
-#include "SFW/Serializer.h"
-#include "ServerContext.h"
-#include "ServerPackets.h"
+#include "block_state.hpp"
+#include "client_packets.hpp"
+#include "player_handler.hpp"
+#include "data_types/bitset.hpp"
+#include "data_types/identifier.hpp"
+#include "data_types/nbt.hpp"
+#include "registry.hpp"
+#include "server_context.hpp"
+#include "server_packets.hpp"
 #include "utils.hpp"
-#include "packet.h"
+#include "packet.hpp"
 
 namespace mc
 {

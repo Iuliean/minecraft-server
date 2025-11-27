@@ -1,15 +1,15 @@
-#ifndef PLAYER_HANDLER_H
-#define PLAYER_HANDLER_H
+#ifndef PLAYER_HANDLER_HPP
+#define PLAYER_HANDLER_HPP
 #include <memory>
 #include <spdlog/spdlog.h>
 #include <nlohmann/json.hpp>
 #include <SFW/Connection.h>
 
-#include "packet.h"
-#include "ClientPackets.h"
+#include "packet.hpp"
+#include "client_packets.hpp"
 #include "SFW/LoggerManager.h"
-#include "ServerContext.h"
-#include "ServerPackets.h"
+#include "server_context.hpp"
+#include "server_packets.hpp"
 #include "utils.hpp"
 
 namespace mc

@@ -1,5 +1,5 @@
-#ifndef BIT_SET_H
-#define BIT_SET_H
+#ifndef BIT_SET_HPP
+#define BIT_SET_HPP
 #include <cstdint>
 #include <vector>
 

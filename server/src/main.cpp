@@ -1,8 +1,8 @@
 #include <SFW/Server.h>
 #include <SFW/LoggerManager.h>
 
-#include "MinecraftHandler.h"
-#include "Registry.h"
+#include "minecraft_handler.hpp"
+#include "registry.hpp"
 
 int main()
 {

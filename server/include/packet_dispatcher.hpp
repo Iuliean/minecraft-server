@@ -5,7 +5,7 @@
 #include <functional>
 #include <flat_map>
 #include <queue>
-#include "packet.h"
+#include "packet.hpp"
 #include "utils.hpp"
 namespace mc
 {

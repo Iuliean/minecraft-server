@@ -25,17 +25,8 @@ FetchContent_MakeAvailable(googletest)
 add_subdirectory(dependencies/SFW)
 add_subdirectory(dependencies/nlohmann-json)
 
-add_subdirectory(src)
+add_subdirectory(server)
 add_subdirectory(test)
-
-target_include_directories(${PROJECT_NAME}
-                        PRIVATE include/
-                        PRIVATE dependencies/nlohmann-json/single_include)
-
-target_link_libraries(${PROJECT_NAME} PRIVATE SFW::SFW PRIVATE zstr::zstr)
-
-target_compile_options(${PROJECT_NAME} PRIVATE ${FLAGS})
-
 
 install(DIRECTORY "data/registries/packets" DESTINATION ${CMAKE_INSTALL_PREFIX})
 install(DIRECTORY "data/registries" DESTINATION ${CMAKE_INSTALL_PREFIX})

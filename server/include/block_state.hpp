@@ -1,7 +1,7 @@
-#ifndef BLOCK_STATE_H
-#define BLOCK_STATE_H
+#ifndef BLOCK_STATE_HPP
+#define BLOCK_STATE_HPP
 
-#include "DataTypes/Identifier.h"
+#include "data_types/identifier.hpp"
 #include "SFW/LoggerManager.h"
 #include <cstdint>
 #include <initializer_list>

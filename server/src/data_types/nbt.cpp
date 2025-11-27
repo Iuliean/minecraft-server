@@ -4,7 +4,7 @@
 #include <string>
 #include <utility>
 
-#include "DataTypes/nbt.h"
+#include "data_types/nbt.hpp"
 #include "utils.hpp"
 
 namespace mc::nbt

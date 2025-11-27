@@ -1,10 +1,10 @@
-#ifndef T_NBT_H
-#define T_NBT_H
+#ifndef T_NBT_HPP
+#define T_NBT_HPP
 #include <gtest/gtest.h>
 #include <random>
 #include <ranges>
 #include <vector>
-#include "DataTypes/nbt.h"
+#include "data_types/nbt.hpp"
 
 
 class nbt_list_test : public testing::Test
