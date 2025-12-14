@@ -10,7 +10,7 @@ int main()
     iu::LoggerManager::LogFile("lastrun.log");
 #
     mc::BlockStateRegistry::Init("registries/blocks.json");
-    iu::DistributedServer<mc::MinecraftHanlder> server("0.0.0.0", 25565);
+    iu::DistributedServer<mc::minecraft_handler> server("0.0.0.0", 25565);
     std::thread serverThread([&server](){
         server.Run();
     });

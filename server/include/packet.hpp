@@ -51,7 +51,8 @@ namespace mc
         virtual ~packet() = default;
 
         template<PacketID T>
-        typename std::remove_const<T>::type get_id()const { return m_id;}
+        typename std::remove_const<T>::type get_id()const
+        { return static_cast<std::remove_const_t<T>>(m_id);}
 
         virtual std::string as_string()const = 0;
         virtual constexpr std::string packet_name()const = 0;
@@ -70,7 +71,7 @@ namespace mc
 //FMT FORMATTERS
 
 template <typename T>
-    requires std::derived_from<mc::packet, T>
+    requires std::derived_from<T, mc::packet>
 struct std::formatter<T> : public std::formatter<std::string>
 {
   auto format(const mc::packet& packet, format_context& ctx) const {

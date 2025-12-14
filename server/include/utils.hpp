@@ -28,7 +28,11 @@ namespace mc
 
         template<typename T>
         concept IteratorU8 =
-            std::same_as<typename T::value_type, uint8_t> && std::input_or_output_iterator<T>;
+            std::same_as<
+                typename std::iterator_traits<T>::value_type,
+                uint8_t
+            > &&
+            std::input_or_output_iterator<T>;
 
         template<typename T>
         concept Numeric = std::integral<T> || std::floating_point<T>;

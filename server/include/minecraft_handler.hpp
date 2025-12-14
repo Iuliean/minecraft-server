@@ -5,30 +5,75 @@
 
 #include <atomic>
 
+#include "client_packets.hpp"
+#include "player_handler.hpp"
 #include "server_context.hpp"
 #include "server_state.hpp"
 #include "packet_dispatcher.hpp"
+#include "packet.hpp"
+#include "utils.hpp"
+
 namespace mc
 {
 
-    class MinecraftHanlder: public iu::ServerConnectionHandler, packet_dispatcher
+    class minecraft_handler: public iu::ServerConnectionHandler, packet_dispatcher
     {
     public:
-        MinecraftHanlder();
-        virtual ~MinecraftHanlder()= default;
+        minecraft_handler();
+        virtual ~minecraft_handler()= default;
 
         void HandleConnection(iu::Connection& connection)override;
         void OnConnected(iu::Connection& connection)override;
         void Stop()override;
 
     private:
+        void register_callbacks();
 
-        void dispatch() override;
+        void dispatch(packet_ptr packet) override;
+        /***********
+         * PARSING *
+         **********/
+
+        template<util::IteratorU8 Iter>
+        packet_ptr parse_packet(Iter& iter)
+        {
+            switch (m_state.get_state())
+            {
+                using enum state;
+                case idle: return client::parse_idle_packet(iter);
+                case status: return client::parse_status_packet(iter);
+                case config: return client::parse_config_packet(iter);
+                case login: return client::parse_login_packet(iter);
+                case play: return client::parse_play_packet(iter);
+                default:
+                {
+                    SFW_LOG_ERROR("minecraft_handler", "HUH!!!?!?!?!?!?!");
+                    throw std::runtime_error("LOLLOLOL");
+                }
+            }
+        }
+
+        /************
+        * CALLBACKS *
+        ************/
+
+        template<typename T>
+            requires std::derived_from<T, packet>
+        std::function<void(T&)> bind_callback(void (minecraft_handler::*method)(T&))
+        {
+            return [this, method](T& packet) { std::invoke(method, this, packet); };
+        }
+
+        void on_handshake(client::handshake_packet& handshake);
+        void on_status(client::status_request_packet& status);
+        void on_ping(client::ping_request& ping);
 
         server_state m_state;
+        std::optional<player_handler> m_player_handler;
         ServerContext m_context;
+        std::optional<iu::Connection> m_client;
         std::atomic_bool m_stop;
     };
 }
 
-#endif //MINECRAFT_HANDLER_H
+#endif //MINECRAFT_HANDLER_HPP

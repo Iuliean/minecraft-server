@@ -4,9 +4,10 @@
 #include <concepts>
 #include <functional>
 #include <flat_map>
-#include <queue>
+#include <type_traits>
+#include "client_packets.hpp"
 #include "packet.hpp"
-#include "utils.hpp"
+
 namespace mc
 {
     class packet_dispatcher
@@ -51,13 +52,16 @@ namespace mc
     protected:
         using wrapper_callback = std::function<void(packet_ptr)>;
 
-        virtual void dispatch() = 0;
+        virtual void dispatch(packet_ptr packet) = 0;
 
-        std::flat_map<client::idle_packet_id, wrapper_callback> m_idle_cb;
-        std::flat_map<client::status_packet_id, wrapper_callback> m_status_cb;
-        std::flat_map<client::login_packet_id, wrapper_callback> m_login_cb;
-        std::flat_map<client::config_packet_id, wrapper_callback> m_config_cb;
-        std::flat_map<client::play_packet_id, wrapper_callback> m_play_cb;
+        template<PacketID T>
+        using map_type = std::flat_map<T, wrapper_callback>;
+
+        map_type<client::idle_packet_id> m_idle_cb;
+        map_type<client::status_packet_id> m_status_cb;
+        map_type<client::login_packet_id> m_login_cb;
+        map_type<client::config_packet_id> m_config_cb;
+        map_type<client::play_packet_id> m_play_cb;
     };
 }
 

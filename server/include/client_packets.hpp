@@ -4,6 +4,7 @@
 #include "utils.hpp"
 #include "data_types/uuid.hpp"
 
+#include <cstdint>
 #include <string>
 
 namespace mc
@@ -12,35 +13,35 @@ namespace mc
     {
         enum class idle_packet_id : int
         {
-            UNKNOWN   = -1,
-            HANDSHAKE = 0
+            unknown   = -1,
+            handshake = 0
         };
 
         enum class status_packet_id : int
         {
-            UNKNOWN = -1,
-            STATUS  = 0,
-            PING    = 1
+            unknown = -1,
+            status  = 0,
+            ping    = 1
         };
 
         enum class login_packet_id : int
         {
-            UNKNOWN = -1,
-            START   = 0,
-            LoginAcknowledged = 0x03
+            unknown = -1,
+            start   = 0,
+            login_ack = 0x03
 
         };
 
         enum class config_packet_id : int
         {
-            UNKNOWN = -1,
-            AcknowledgeConfigEnd = 0x03,
-            KnownPacks = 0x07
+            unknown = -1,
+            ack_config_end = 0x03,
+            known_packs = 0x07
         };
 
         enum class play_packet_id : int
         {
-            UNKNOWN           = -1,
+            unknown           = -1,
         };
 
         // ***************
@@ -52,10 +53,14 @@ namespace mc
         public:
             template<util::IteratorU8 Iter>
             handshake_packet(Iter& data)
-                : packet(idle_packet_id::HANDSHAKE),
+                : packet(idle_packet_id::handshake),
                   m_protocol_version(util::readVarInt(data)),
                   m_server_address(util::readString(data)),
-                  m_port((*data << 8) + *(++data)),
+                  m_port([&data](){
+                      uint16_t result = *data << 8;
+                      result += *(++data);
+                      return result;
+                  }()),
                   m_next_state(util::readVarInt(++data))
             {
             }
@@ -88,7 +93,7 @@ namespace mc
 
             switch(id)
             {
-                case idle_packet_id::HANDSHAKE:
+                case idle_packet_id::handshake:
                     return std::make_unique<handshake_packet>(iter);
                 default:
                     return nullptr;
@@ -101,7 +106,7 @@ namespace mc
         class status_request_packet : public packet
         {
         public:
-            status_request_packet() : packet(status_packet_id::STATUS) {}
+            status_request_packet() : packet(status_packet_id::status) {}
             virtual ~status_request_packet() = default;
 
             constexpr std::string as_string() const override { return ""; }
@@ -113,9 +118,19 @@ namespace mc
         public:
             template<util::IteratorU8 Iter>
             ping_request(Iter& data)
-                : packet(status_packet_id::PING),
-                  m_payload((*data << 8) + (*++data << 8) + (*++data << 8) + (*++data << 8) +
-                            (*++data << 8) + (*++data << 8) + (*++data << 8) + (*++data << 8))
+                : packet(status_packet_id::ping),
+                  m_payload([&data](){
+                      uint64_t result = 0;
+                      result += *(data++) << 8;
+                      result += *(data++) << 8;
+                      result += *(data++) << 8;
+                      result += *(data++) << 8;
+                      result += *(data++) << 8;
+                      result += *(data++) << 8;
+                      result += *(data++) << 8;
+                      result += *(data++) << 8;
+                      return result;
+                  }())
             {
             }
             virtual ~ping_request() = default;
@@ -136,9 +151,9 @@ namespace mc
 
             switch(id)
             {
-                case status_packet_id::STATUS:
-                    return std::make_unique<status_request_packet>(iter);
-                case status_packet_id::PING:
+                case status_packet_id::status:
+                    return std::make_unique<status_request_packet>();
+                case status_packet_id::ping:
                     return std::make_unique<ping_request>(iter);
                 default:
                     return nullptr;
@@ -153,7 +168,7 @@ namespace mc
         public:
             template<util::IteratorU8 Iter>
             known_packs_packet(Iter& data)
-                : packet(config_packet_id::KnownPacks),
+                : packet(config_packet_id::known_packs),
                   m_namespace([&data](){util::readVarInt(data); return util::readString(data);}()),
                   m_id(util::readString(data)),
                   m_version(util::readString(data))
@@ -175,7 +190,7 @@ namespace mc
         {
         public:
             ack_config()
-                : packet(config_packet_id::AcknowledgeConfigEnd)
+                : packet(config_packet_id::ack_config_end)
             {}
             virtual ~ack_config() = default;
 
@@ -191,10 +206,10 @@ namespace mc
 
             switch(id)
             {
-                case config_packet_id::KnownPacks:
+                case config_packet_id::known_packs:
                     return std::make_unique<known_packs_packet>(iter);
-                case config_packet_id::AcknowledgeConfigEnd:
-                    return std::make_unique<ack_config>(iter);
+                case config_packet_id::ack_config_end:
+                    return std::make_unique<ack_config>();
                 default:
                     return nullptr;
             }
@@ -209,7 +224,7 @@ namespace mc
         public:
             template<util::IteratorU8 Iter>
             login_start_packet(Iter& data)
-                : packet(login_packet_id::START),
+                : packet(login_packet_id::start),
                   m_player_name(util::readString(data)),
                   m_has_uuid(*data++),
                   m_uuid(data)
@@ -241,7 +256,7 @@ namespace mc
         class login_ack : public packet
         {
         public:
-            login_ack() : packet(login_packet_id::LoginAcknowledged) {}
+            login_ack() : packet(login_packet_id::login_ack) {}
             virtual ~login_ack() = default;
 
             constexpr std::string as_string() const override { return ""; }
@@ -256,10 +271,10 @@ namespace mc
 
             switch(id)
             {
-                case login_packet_id::START:
+                case login_packet_id::start:
                     return std::make_unique<login_start_packet>(iter);
-                case login_packet_id::LoginAcknowledged:
-                    return std::make_unique<ack_config>(iter);
+                case login_packet_id::login_ack:
+                    return std::make_unique<ack_config>();
                 default:
                     return nullptr;
             }

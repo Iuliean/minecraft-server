@@ -46,7 +46,7 @@
     {
       "name": "x86_64-Debug",
       "configurePreset": "x86_64-Debug",
-      "jobs": 1,
+      "jobs": 12,
       "verbose": true
     }
   ]

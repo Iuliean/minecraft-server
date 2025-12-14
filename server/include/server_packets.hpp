@@ -19,34 +19,34 @@ namespace mc::server
 
     enum class idle_packet_id : int
     {
-        UNKNOWN = -1
+        unknown = -1
     };
 
     enum class status_packet_id : int
     {
-        UNKNOWN = -1,
-        STATUS  = 0
+        unknown = -1,
+        status  = 0
     };
 
     enum class login_packet_id : int
     {
-        UNKNOWN = -1,
-        SUCCESS = 0x02
+        unknown = -1,
+        success = 0x02
     };
 
     enum class config_packet_id : int
     {
-        UNKNOWN = -1,
-        FinishConfiguration = 0x03,
-        KnownPacks = 0x0E
+        unknown = -1,
+        finish_config = 0x03,
+        known_packs = 0x0E
     };
 
     enum class play_packet_id : int
     {
-        UNKNOWN   = -1,
-        GameEvent = 0x22,
-        LoginPlay = 0x2b,
-        SynchronisePlayerPosition = 0x41
+        unknown   = -1,
+        game_event = 0x22,
+        login_play = 0x2b,
+        sync_player_pos = 0x41
     };
 
     // ****************
@@ -57,7 +57,7 @@ namespace mc::server
     {
     public:
         login_success_packet(const client::login_start_packet& packet)
-            : mc::packet(login_packet_id::SUCCESS),
+            : mc::packet(login_packet_id::success),
               m_uuid(packet.get_uuid()),
               m_name(packet.get_player_name()),
               m_elements_count(0)
@@ -94,7 +94,7 @@ namespace mc::server
     {
     public:
         status_packet()
-            : packet(status_packet_id::STATUS),
+            : packet(status_packet_id::status),
               m_payload()
         {
             // FORMATED
@@ -131,7 +131,7 @@ namespace mc::server
     {
     public:
         known_packs(std::string nspace, std::string id, std::string version)
-        : packet(std::to_underlying(config_packet_id::KnownPacks)),
+        : packet(std::to_underlying(config_packet_id::known_packs)),
           m_namespace(std::move(nspace)),
           m_id(std::move(id)),
           m_version(std::move(version))
@@ -164,7 +164,7 @@ namespace mc::server
     {
     public:
         finish_config()
-            : packet(config_packet_id::FinishConfiguration)
+            : packet(config_packet_id::finish_config)
         {
         }
         virtual ~finish_config() = default;
@@ -183,7 +183,7 @@ namespace mc::server
     {
     public:
         login_play_packet()
-        : mc::packet(play_packet_id::LoginPlay),
+        : mc::packet(play_packet_id::login_play),
           m_entity_id(243645754),
           m_is_hardcore(false),
           m_dimension_identifiers({Identifier("overworld"), Identifier("nether")}),
@@ -329,7 +329,11 @@ namespace mc::server
             LimitedCrafting,
             StartWaitingForChunks
         };
-        game_event(event event, float value = 0);
+        game_event(event event, float value = 0) noexcept
+            : packet(play_packet_id::game_event),
+              m_event(event),
+              m_value(value)
+        {}
         virtual ~game_event() = default;
 
         std::string as_string() const override { return std::format("Event: {}, Value: {}", std::to_underlying(m_event), m_value); }
@@ -345,7 +349,7 @@ namespace mc::server
     {
     public:
         sync_player_position(
-            util::varInt teleportID,
+            util::varInt teleport_id,
             double x,
             double y,
             double z,
@@ -355,7 +359,20 @@ namespace mc::server
             float yaw,
             float pitch,
             int relativeMask
-        );
+        )
+        : packet(play_packet_id::sync_player_pos),
+          m_teleport_id(teleport_id),
+          m_x(x),
+          m_y(y),
+          m_z(z),
+          m_velocity_x(velocity_x),
+          m_velocity_y(velocity_y),
+          m_velocity_z(velocity_z),
+          m_yaw(yaw),
+          m_pitch(pitch),
+          m_relative_mask(relativeMask)
+
+        {}
         virtual ~sync_player_position() = default;
 
         std::string as_string() const override

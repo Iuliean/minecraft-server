@@ -1,51 +1,60 @@
 #ifndef PLAYER_HANDLER_HPP
 #define PLAYER_HANDLER_HPP
-#include <memory>
+#include <concepts>
 #include <spdlog/spdlog.h>
 #include <nlohmann/json.hpp>
 #include <SFW/Connection.h>
 
 #include "packet.hpp"
 #include "client_packets.hpp"
-#include "SFW/LoggerManager.h"
+#include "packet_dispatcher.hpp"
 #include "server_context.hpp"
 #include "server_packets.hpp"
-#include "utils.hpp"
+#include "server_state.hpp"
 
 namespace mc
 {
-    enum class PlayerHandlerState: int
-    {
-        IDLE    = 0,
-        STATUS  = 1,
-        LOGIN   = 2,
-        CONFIG  = 3,
-        PLAY    = 4
-    };
-
-    class PlayerHandler
+    class player_handler
     {
     public:
-        PlayerHandler() = delete;
-        PlayerHandler(const PlayerHandler&) = delete;
-        PlayerHandler(PlayerHandler&&) = delete;
+        player_handler() = delete;
+        player_handler(const player_handler&) = delete;
+        player_handler(player_handler&&) = delete;
 
-        PlayerHandler& operator=(const PlayerHandler&) = delete;
-        PlayerHandler& operator=(PlayerHandler&&) = delete;
+        player_handler& operator=(const player_handler&) = delete;
+        player_handler& operator=(player_handler&&) = delete;
 
-        PlayerHandler(iu::Connection& client, const ServerContext& context);
-        ~PlayerHandler() = default;
+        player_handler(iu::Connection& client, const ServerContext& context, packet_dispatcher& dispatcher, server_state& state);
+        ~player_handler() = default;
 
         //void Execute(const std::vector<uint8_t>& data);
 
-        void PlayLoop();
+        void play_loop();
 
     private:
 
+        template<typename T>
+            requires std::derived_from<T, packet>
+        std::function<void(T&)> bind_callback(void (player_handler::*method)(T&))
+        {
+            return [this, method](T& packet) { std::invoke(method, this, packet); };
+        }
+
+        void register_callbacks(packet_dispatcher& dispatcher);
+
+        /************
+        * CALLBACKS *
+        *************/
+
+        void on_login_start(client::login_start_packet& start_packet);
+        void on_login_ack(client::login_ack& ack_packet);
+
+        void on_known_packs(client::known_packs_packet& known_packs);
+        void on_ack_config_end(client::ack_config& conifg_ack);
+
         iu::Connection& m_client;
-        PlayerHandlerState m_state;
+        server_state m_state;
         const ServerContext& m_context;
-        server::status_packet m_statusMessage;
     };
 }
 #endif //PLAYER_HANDLER_H
