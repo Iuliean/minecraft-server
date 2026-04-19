@@ -214,10 +214,8 @@ namespace mc::nbt
 
         iterator emplace(const_iterator pos, auto&&... args);
 
-        iterator erase(const_iterator pos)
-            { return m_data.erase(pos); }
-        iterator erase(const_iterator begin, const_iterator  end)
-            {return m_data.erase(begin, end);}
+        iterator erase(const_iterator pos);
+        iterator erase(const_iterator begin, const_iterator  end);
 
         void push_back(const auto& value)
             { insert(m_data.end(), value); }
@@ -227,8 +225,7 @@ namespace mc::nbt
             { return *emplace(m_data.end(), std::forward<decltype(args)>(args)...); }
         void append_range(auto&& range)
             { insert(m_data.end(), std::forward<decltype(range)>(range)); }
-        void pop_back()
-            { m_data.pop_back(); }
+        void pop_back();
 
         // void resize(size_t new_size);
         // void resize(size_t new_size, const auto& value);
@@ -299,17 +296,22 @@ namespace mc::nbt
         }
 
         template<can_construct_nbt_tag T>
-        operator const T&() const
+        explicit operator const T&() const
         {
             return std::get<T>(*this);
         }
 
-        decltype(auto) operator[](this auto& self, std::string key)
+        decltype(auto) operator[](this auto& self, const std::string& key)
         {
             if (!std::holds_alternative<compound>(self))
                 throw nbt_error("object is not compound");
 
             return std::get<compound>(self)[key];
+        }
+
+        decltype(auto) operator[](this auto& self, const char* key)
+        {
+            return self[std::string(key)];
         }
     };
 
@@ -365,7 +367,7 @@ namespace mc::nbt
     }
 
     template<can_construct_nbt_tag T, typename ...Args >
-    std::pair<compound::iterator, bool> compound::emplace(std::string name, Args&&... args )
+    inline std::pair<compound::iterator, bool> compound::emplace(std::string name, Args&&... args )
     {
         return map_type::emplace
         (
@@ -376,7 +378,7 @@ namespace mc::nbt
     }
 
     template<can_construct_nbt_tag T, typename ...Args >
-    std::pair<compound::iterator, bool> compound::emplace(std::string_view name, Args&&... args )
+    inline std::pair<compound::iterator, bool> compound::emplace(std::string_view name, Args&&... args )
     {
         return emplace<T>(std::string(name), std::forward<Args>(args)...);
     }
@@ -394,54 +396,54 @@ namespace mc::nbt
     inline list::list()
         : m_current_type(tag_type::UNKNOWN), m_data(){}
     /* ITERATORS */
-    decltype(auto) list::begin(this auto& self) noexcept
+    inline decltype(auto) list::begin(this auto& self) noexcept
     {
         return self.m_data.begin();
     }
 
-    decltype(auto) list::end(this auto& self) noexcept
+    inline decltype(auto) list::end(this auto& self) noexcept
     {
         return self.m_data.end();
     }
 
-    decltype(auto) list::rbegin(this auto& self) noexcept
+    inline decltype(auto) list::rbegin(this auto& self) noexcept
     {
         return self.m_data.rbegin();
     }
 
-    decltype(auto) list::rend(this auto& self) noexcept
+    inline decltype(auto) list::rend(this auto& self) noexcept
     {
         return self.m_data.rend();
     }
 
     /* ELEMENT ACCESS */
-    [[nodiscard]] decltype(auto) list::at(this auto& self, size_t idx)
+    [[nodiscard]] inline decltype(auto) list::at(this auto& self, size_t idx)
     {
         return self.m_data.at(idx);
     }
 
-    [[nodiscard]] decltype(auto) list::operator[](this auto& self, size_t idx)
+    [[nodiscard]] inline decltype(auto) list::operator[](this auto& self, size_t idx)
     {
         return self.at(idx);
     }
 
-    [[nodiscard]] decltype(auto) list::front(this auto& self)
+    [[nodiscard]] inline decltype(auto) list::front(this auto& self)
     {
         return self.m_data.front();
     }
 
-    [[nodiscard]] decltype(auto) list::back(this auto& self)
+    [[nodiscard]] inline decltype(auto) list::back(this auto& self)
     {
         return self.m_data.back();
     }
 
-    [[nodiscard]] decltype(auto) list::data(this auto& self) noexcept
+    [[nodiscard]] inline decltype(auto) list::data(this auto& self) noexcept
     {
         return self.m_data.data();
     }
 
     /* CAPACITY */
-    [[nodiscard]] decltype(auto) list::empty(this auto& self) noexcept
+    [[nodiscard]] inline decltype(auto) list::empty(this auto& self) noexcept
     {
         return self.m_data.empty();
     }
@@ -456,19 +458,28 @@ namespace mc::nbt
         return m_data.max_size();
     }
 
-    void inline list::reserve(size_t new_capacity)
+    inline void list::reserve(size_t new_capacity)
     {
         m_data.reserve(new_capacity);
     }
 
     /* MODIFIERS */
 
-    void inline list::clear() noexcept
+    inline list::iterator list::erase(list::const_iterator pos)
+    { return m_data.erase(pos); }
+    
+    inline list::iterator list::erase(list::const_iterator begin, list::const_iterator  end)
+    { return m_data.erase(begin, end); }
+
+    inline void list::pop_back()
+    { m_data.pop_back(); }
+
+    inline void list::clear() noexcept
     {
         m_data.clear();
     }
 
-    list::iterator list::insert(const_iterator pos, auto&& value)
+    inline list::iterator list::insert(const_iterator pos, auto&& value)
         requires can_construct_nbt_tag<decltype(value)>||
         std::same_as<list::value_type, std::remove_reference_t<decltype(value)>>
     {
@@ -477,7 +488,7 @@ namespace mc::nbt
         return m_data.insert(pos, std::forward<decltype(value)>(value));
     }
 
-    list::iterator list::insert(const_iterator pos, size_t count, const auto& value)
+    inline list::iterator list::insert(const_iterator pos, size_t count, const auto& value)
         requires can_construct_nbt_tag<decltype(value)>||
         std::same_as<list::value_type, std::remove_cvref_t<decltype(value)>>
     {
@@ -486,7 +497,7 @@ namespace mc::nbt
         return m_data.insert(pos, count, std::forward<decltype(value)>(value));
     }
 
-    list::iterator list::insert(const_iterator pos, legacy_nbt_input_iterator auto begin, legacy_nbt_input_iterator auto end)
+    inline list::iterator list::insert(const_iterator pos, legacy_nbt_input_iterator auto begin, legacy_nbt_input_iterator auto end)
         requires std::same_as<decltype(begin), decltype(end)>
     {
         const tag_type type = get_tag_type(*begin);
@@ -499,7 +510,7 @@ namespace mc::nbt
         return m_data.insert(pos, begin, end);
     }
 
-    list::iterator list::insert_range(const_iterator pos, nbt_range auto&& range)
+    inline list::iterator list::insert_range(const_iterator pos, nbt_range auto&& range)
     {
         const tag_type type = get_tag_type(*std::ranges::begin(range));
         resolve_tag_type_or_throw(type);
@@ -511,7 +522,7 @@ namespace mc::nbt
         return m_data.insert(pos, std::forward<decltype(range)>(range));
     }
 
-    list::iterator list::emplace(const_iterator pos, auto&&... args)
+    inline list::iterator list::emplace(const_iterator pos, auto&&... args)
     {
         switch(m_current_type)
         {
@@ -565,7 +576,7 @@ namespace mc::nbt
             throw nbt_error("wrong tag type");
     }
 
-    bool list::check_container_for_tag_consistency(legacy_nbt_input_iterator auto begin, legacy_nbt_input_iterator auto end)
+    inline bool list::check_container_for_tag_consistency(legacy_nbt_input_iterator auto begin, legacy_nbt_input_iterator auto end)
         requires std::same_as<decltype(begin), decltype(end)>
     {
         const tag_type type = get_tag_type(*begin);
@@ -654,7 +665,7 @@ namespace mc::nbt
     }
 
     template<can_construct_nbt_tag T, typename ...Args>
-    list::iterator list::emplace_at(const_iterator pos, std::in_place_type_t<T> type, Args&& ...args)
+    inline list::iterator list::emplace_at(const_iterator pos, std::in_place_type_t<T> type, Args&& ...args)
         requires std::constructible_from<T, Args...>
     {
         return m_data.emplace(pos, type, std::forward<Args>(args)...);

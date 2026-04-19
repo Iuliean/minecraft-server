@@ -14,6 +14,15 @@ namespace mc
     //  #############################
     //  # BlockStateRegistry Static #
     //  #############################
+    
+    static inline std::unique_ptr<BlockStateRegistry> s_registryInstance = nullptr;
+
+    const BlockStateRegistry& BlockStateRegistry::Instance() noexcept
+    {
+        ASSERT(s_registryInstance != nullptr, "BlockRegistry not initialized");
+        return *s_registryInstance;
+    }
+    
     void BlockStateRegistry::Init(std::filesystem::path registryPath)
     {
         if (!s_registryInstance)

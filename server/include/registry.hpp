@@ -25,19 +25,14 @@ namespace mc
 
         static void Init(std::filesystem::path registryPath);
         static void Deinit();
-        static const BlockStateRegistry& Instance() noexcept
-        {
-            ASSERT(s_registryInstance != nullptr, "BlockRegistry not initialized");
-            return *s_registryInstance;
-        }
+        static const BlockStateRegistry& Instance() noexcept;
     private:
         BlockStateRegistry();
 
         std::unordered_map<BlockState, int> m_stateToIdMap;
         std::unordered_map<int, BlockState> m_idToBlockState;
 
-        static inline std::unique_ptr<BlockStateRegistry> s_registryInstance = nullptr;
-
+        
         static void LoadRegistryFile(std::filesystem::path registryPath);
     };
 }

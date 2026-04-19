@@ -1,4 +1,4 @@
-#include <SFW/Server.h>
+o #include <SFW/Server.h>
 #include <SFW/LoggerManager.h>
 
 #include "minecraft_handler.hpp"
