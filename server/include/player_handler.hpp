@@ -53,7 +53,7 @@ namespace mc
         void on_ack_config_end(client::ack_config& conifg_ack);
 
         iu::Connection& m_client;
-        server_state m_state;
+        server_state& m_state;
         const ServerContext& m_context;
     };
 }

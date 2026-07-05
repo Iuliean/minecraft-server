@@ -30,6 +30,9 @@ namespace mc
         void register_callbacks();
 
         void dispatch(packet_ptr packet) override;
+
+        void build_registry_pakcets();
+
         /***********
          * PARSING *
          **********/

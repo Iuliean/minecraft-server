@@ -72,8 +72,13 @@ namespace mc
     void player_handler::on_login_start(client::login_start_packet& start_packet)
     {
         server::login_success_packet success_packet{start_packet};
-        m_client.Send(success_packet);
-        SFW_LOG_DEBUG("player_handler", "Success packet sent");
+        static std::atomic_bool received(false);
+        if (!received)
+        {
+            received = true;
+            m_client.Send(success_packet);
+            SFW_LOG_DEBUG("player_handler", "Success packet sent");
+        }
     }
 
     void player_handler::on_login_ack(client::login_ack& ack_packet)
@@ -82,23 +87,24 @@ namespace mc
         SFW_LOG_INFO("player_handler", "Starting configuration");
         m_state.set_state(state::config);
         m_client.Send(server::known_packs("minecraft", "core", "1.21.8"));
-    }
 
-    /************
-    * CONFIGURE *
-    ************/
-
-    void player_handler::on_known_packs(client::known_packs_packet& known_packs)
-    {
-        SFW_LOG_DEBUG("player_handler", "{}", known_packs);
         SFW_LOG_INFO("player_handler", "Sending registry data ...");
 
         for (const auto& registry : m_context.registry_packets)
             m_client.Send(registry);
 
         SFW_LOG_INFO("player_handler", "Sending registry data ... DONE");
-
         m_client.Send(server::finish_config{});
+}
+
+/************
+* CONFIGURE *
+************/
+
+    void player_handler::on_known_packs(client::known_packs_packet& known_packs)
+    {
+        SFW_LOG_DEBUG("player_handler", "{}", known_packs);
+
     }
 
     void player_handler::on_ack_config_end(client::ack_config& config_ack)

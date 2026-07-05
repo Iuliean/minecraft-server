@@ -274,7 +274,7 @@ namespace mc
                 case login_packet_id::start:
                     return std::make_unique<login_start_packet>(iter);
                 case login_packet_id::login_ack:
-                    return std::make_unique<ack_config>();
+                    return std::make_unique<login_ack>();
                 default:
                     return nullptr;
             }

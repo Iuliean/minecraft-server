@@ -74,6 +74,7 @@ namespace mc
         register_callbacks();
         m_state.set_state(state::idle);
         m_context.chunk_region = loadChunkRegion("map/r.0.0.mca");
+        build_registry_pakcets();
     }
 
     void minecraft_handler::OnConnected(iu::Connection& connection)
@@ -106,7 +107,10 @@ namespace mc
                     if (packet)
                         dispatch(std::move(packet));
                     else
+                    {
+                        SFW_LOG_DEBUG("minecraft_handker", "Discarding packet");
                         break;
+                    }
                 }
 
 
@@ -143,6 +147,7 @@ namespace mc
         {
             auto it = callback_map.find(packet->get_id<T>());
             auto end = callback_map.end();
+            SFW_LOG_INFO("minecraft_handler", "ID: {}", packet->get_id<int>());
 
             if(it == end)
             {
@@ -183,6 +188,23 @@ namespace mc
                 break;
             }
         }
+    }
+
+
+    void minecraft_handler::build_registry_pakcets()
+    {
+        SFW_LOG_DEBUG("minecraft_handler", "Loading registry packets...")
+
+        for (const auto& [registry, packetFile] : std::ranges::views::zip(m_context.registry_packets, std::filesystem::directory_iterator("packets")))
+        {
+            SFW_LOG_DEBUG("MinecraftHandler", "Loading packet {}", packetFile.path().filename().string());
+            std::ifstream packet(packetFile.path(), std::ios::binary);
+            const size_t fileSize = packetFile.file_size();
+            registry.resize(fileSize);
+            packet.read(reinterpret_cast<char*>(registry.data()), fileSize);
+        }
+
+        SFW_LOG_DEBUG("minecraft_handler", "Loading registry packets... Done");
     }
 
     void minecraft_handler::Stop()
