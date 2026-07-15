@@ -22,6 +22,13 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(googletest)
 
+FetchContent_Declare(
+    libcoro
+    GIT_REPOSITORY https://github.com/jbaldwin/libcoro.git
+    GIT_TAG        "v0.16.0"
+)
+FetchContent_MakeAvailable(libcoro)
+
 add_subdirectory(dependencies/SFW)
 add_subdirectory(dependencies/nlohmann-json)
 

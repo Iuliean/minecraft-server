@@ -19,7 +19,7 @@ namespace mc
         }
         constexpr void set(int index, bool value)
         {
-            m_data[index / 64] = m_data[index / 64] | (1 << (index % 64));
+            m_data[index / 64] = m_data[index / 64] | (value << (index % 64));
         }
     private:
         friend struct iu::Serializer<mc::bit_set>;

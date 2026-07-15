@@ -19,6 +19,7 @@
 #include "data_types/nbt.hpp"
 #include "packet.hpp"
 #include "server_state.hpp"
+#include "coro/coro.hpp"
 #include "zstr.hpp"
 
 namespace mc
@@ -71,6 +72,7 @@ namespace mc
           m_client(),
           m_stop(false)
     {
+        SFW_LOG_INFO("MinecraftHandler", "Constructing handler");
         register_callbacks();
         m_state.set_state(state::idle);
         m_context.chunk_region = loadChunkRegion("map/r.0.0.mca");
@@ -155,9 +157,10 @@ namespace mc
                 return;
             }
 
-            it->second(std::move(packet));
+            auto t = it->second(std::move(packet));
+            while (!t.is_ready())
+                t.resume();
         };
-
 
         switch(m_state.get_state())
         {
@@ -190,7 +193,6 @@ namespace mc
         }
     }
 
-
     void minecraft_handler::build_registry_pakcets()
     {
         SFW_LOG_DEBUG("minecraft_handler", "Loading registry packets...")
@@ -216,15 +218,16 @@ namespace mc
     * CALLBACKS *
     ************/
 
-    void minecraft_handler::on_handshake(client::handshake_packet& handshake)
+    coro::task<void> minecraft_handler::on_handshake(client::handshake_packet& handshake)
     {
-        SFW_LOG_DEBUG("minecraft_handler", "{}", handshake);
+        SFW_LOG_DEBUG("minecraft_handler", "{}", static_cast<void*>(&handshake));
+        //SFW_LOG_DEBUG("minecraft_handler", "{}", handshake.as_string());
         const auto next_state = state_from(handshake.get_next_state());
 
         if (!next_state)
         {
             SFW_LOG_ERROR("minecraft_handler", "Could not convert {} to state value", handshake.get_next_state());
-            return;
+            co_return;
         }
 
         switch (*next_state)
@@ -251,17 +254,20 @@ namespace mc
             default:
                 SFW_LOG_WARN("minecraft_handler", "Cannot go from idle to {}", *next_state);
         }
+        co_return;
     }
 
-    void minecraft_handler::on_status(client::status_request_packet& status)
+    coro::task<void> minecraft_handler::on_status([[maybe_unused]] client::status_request_packet& status)
     {
         assert(m_client);
         m_client->Send(server::status_packet{});
         SFW_LOG_DEBUG("minecraft_handler", "Status request sent");
+        co_return;
     }
 
-    void minecraft_handler::on_ping(client::ping_request& ping)
+    coro::task<void> minecraft_handler::on_ping(client::ping_request& ping)
     {
+        SFW_LOG_DEBUG("minecraft_handler", "{}", static_cast<void*>(&ping));
         SFW_LOG_DEBUG("minecraft_handler", "Ping request: {}", ping);
         assert(m_client);
         std::vector<uint8_t> send;
@@ -270,5 +276,6 @@ namespace mc
         *(send.data() + 1) = ping.get_payload();
         util::writeVarInt(send, 0, send.size());
         m_client->Send(send);
+        co_return;
     }
 }

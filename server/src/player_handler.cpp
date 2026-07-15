@@ -69,7 +69,7 @@ namespace mc
     * LOGIN *
     *********/
 
-    void player_handler::on_login_start(client::login_start_packet& start_packet)
+    coro::task<void> player_handler::on_login_start(client::login_start_packet& start_packet)
     {
         server::login_success_packet success_packet{start_packet};
         static std::atomic_bool received(false);
@@ -79,9 +79,11 @@ namespace mc
             m_client.Send(success_packet);
             SFW_LOG_DEBUG("player_handler", "Success packet sent");
         }
+
+        co_return;
     }
 
-    void player_handler::on_login_ack(client::login_ack& ack_packet)
+    coro::task<void> player_handler::on_login_ack([[maybe_unused]]client::login_ack& ack_packet)
     {
         SFW_LOG_INFO("player_handler", "Login Acknowledged");
         SFW_LOG_INFO("player_handler", "Starting configuration");
@@ -95,19 +97,21 @@ namespace mc
 
         SFW_LOG_INFO("player_handler", "Sending registry data ... DONE");
         m_client.Send(server::finish_config{});
+        co_return;
 }
 
 /************
 * CONFIGURE *
 ************/
 
-    void player_handler::on_known_packs(client::known_packs_packet& known_packs)
+    coro::task<void> player_handler::on_known_packs(client::known_packs_packet& known_packs)
     {
         SFW_LOG_DEBUG("player_handler", "{}", known_packs);
+        co_return;
 
     }
 
-    void player_handler::on_ack_config_end(client::ack_config& config_ack)
+    coro::task<void> player_handler::on_ack_config_end([[maybe_unused]]client::ack_config& config_ack)
     {
 
         SFW_LOG_INFO("PlayerHandler", "ConfigAcknowledged switching to play state");
@@ -228,6 +232,8 @@ namespace mc
             m_client.Send(server::sync_player_position(0, 30, 320, 30, 0, 0, 0, 0, 0, 0));
             std::this_thread::sleep_for(std::chrono::seconds(10));
         }
+
+        co_return;
     }
 
 }

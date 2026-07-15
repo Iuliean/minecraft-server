@@ -53,7 +53,7 @@ namespace mc
         {
             const auto delimiterPos = blockName.find(':');
             const mc::Identifier blockIdentifier(blockName.substr(delimiterPos + 1));
-            
+
             for (const auto& state : block["states"])
             {
                 mc::BlockState blockState(blockIdentifier);

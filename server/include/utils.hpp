@@ -161,7 +161,7 @@ struct iu::Serializer<R>
 template<>
 struct iu::Serializer<std::byte>
 {
-    consteval size_t GetSize(std::byte value) const noexcept { return 1; }
+    consteval size_t GetSize([[maybe_unused]]std::byte value) const noexcept { return 1; }
 
     void Serialize(std::vector<uint8_t>& buffer, std::byte value) const noexcept
     {

@@ -11,6 +11,7 @@
 #include "server_context.hpp"
 #include "server_packets.hpp"
 #include "server_state.hpp"
+#include "coro/coro.hpp"
 
 namespace mc
 {
@@ -35,9 +36,9 @@ namespace mc
 
         template<typename T>
             requires std::derived_from<T, packet>
-        std::function<void(T&)> bind_callback(void (player_handler::*method)(T&))
+        std::function<coro::task<void>(T&)> bind_callback(coro::task<void> (player_handler::*method)(T&))
         {
-            return [this, method](T& packet) { std::invoke(method, this, packet); };
+            return [this, method](T& packet) { return std::invoke(method, this, packet); };
         }
 
         void register_callbacks(packet_dispatcher& dispatcher);
@@ -46,11 +47,11 @@ namespace mc
         * CALLBACKS *
         *************/
 
-        void on_login_start(client::login_start_packet& start_packet);
-        void on_login_ack(client::login_ack& ack_packet);
+        coro::task<void> on_login_start(client::login_start_packet& start_packet);
+        coro::task<void> on_login_ack(client::login_ack& ack_packet);
 
-        void on_known_packs(client::known_packs_packet& known_packs);
-        void on_ack_config_end(client::ack_config& conifg_ack);
+        coro::task<void> on_known_packs(client::known_packs_packet& known_packs);
+        coro::task<void> on_ack_config_end(client::ack_config& conifg_ack);
 
         iu::Connection& m_client;
         server_state& m_state;

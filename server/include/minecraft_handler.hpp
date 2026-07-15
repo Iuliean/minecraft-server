@@ -62,14 +62,14 @@ namespace mc
 
         template<typename T>
             requires std::derived_from<T, packet>
-        std::function<void(T&)> bind_callback(void (minecraft_handler::*method)(T&))
+        std::function<coro::task<void>(T&)> bind_callback(coro::task<void> (minecraft_handler::*method)(T&))
         {
-            return [this, method](T& packet) { std::invoke(method, this, packet); };
+            return [this, method](T& packet) { return std::invoke(method, this, packet); };
         }
 
-        void on_handshake(client::handshake_packet& handshake);
-        void on_status(client::status_request_packet& status);
-        void on_ping(client::ping_request& ping);
+        coro::task<void> on_handshake(client::handshake_packet& handshake);
+        coro::task<void> on_status(client::status_request_packet& status);
+        coro::task<void> on_ping(client::ping_request& ping);
 
         server_state m_state;
         std::optional<player_handler> m_player_handler;

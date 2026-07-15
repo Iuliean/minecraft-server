@@ -33,7 +33,7 @@ target_include_directories(${SERVER}
                         PRIVATE include/
                         PRIVATE dependencies/nlohmann-json/single_include)
 
-target_link_libraries(${SERVER} PRIVATE SFW::SFW PRIVATE zstr::zstr)
+target_link_libraries(${SERVER} PRIVATE SFW::SFW PRIVATE zstr::zstr PRIVATE libcoro)
 
 target_compile_options(${SERVER} PRIVATE ${FLAGS})
 

@@ -248,7 +248,7 @@ namespace mc::nbt
             requires std::constructible_from<T, Args...>;
 
         template<can_construct_nbt_tag T, typename ...Args>
-        iterator emplace_at(const_iterator pos, std::in_place_type_t<T> type, Args&& ...args)
+        iterator emplace_at([[maybe_unused]] const_iterator pos, [[maybe_unused]] std::in_place_type_t<T> type, [[maybe_unused]] Args&& ...args)
         {
             throw nbt_error("cannot construct object from args");
         }
