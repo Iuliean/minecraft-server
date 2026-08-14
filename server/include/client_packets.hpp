@@ -3,9 +3,12 @@
 #include "packet.hpp"
 #include "utils.hpp"
 #include "data_types/uuid.hpp"
+#include "data_types/movement.hpp"
 
 #include <cstdint>
+#include <memory>
 #include <string>
+#include <utility>
 
 namespace mc
 {
@@ -42,6 +45,8 @@ namespace mc
         enum class play_packet_id : int
         {
             unknown           = -1,
+            player_input      = 0x2a,
+            player_loaded     = 0x2b
         };
 
         // ***************
@@ -226,7 +231,6 @@ namespace mc
             login_start_packet(Iter& data)
                 : packet(login_packet_id::start),
                   m_player_name(util::readString(data)),
-                  m_has_uuid(*data++),
                   m_uuid(data)
             {
             }
@@ -239,17 +243,15 @@ namespace mc
             {
                 return std::format
                 (
-                    "player_name:{}, has_uuid:{}, uuid:{}",
+                    "player_name:{}, uuid:{}",
                     m_player_name,
-                    m_has_uuid,
-                    m_has_uuid ? m_uuid : uuid()
+                    m_uuid
                 );
             }
             constexpr std::string packet_name() const override { return "login_start"; }
 
         private:
             std::string m_player_name;
-            bool m_has_uuid;
             uuid m_uuid;
         };
 
@@ -284,6 +286,56 @@ namespace mc
         // * PlayPackets *
         // ****************
 
+        class player_loaded : public packet
+        {
+        public:
+            player_loaded() : packet(play_packet_id::player_loaded) { }
+            virtual ~player_loaded() = default;
+
+            constexpr std::string as_string() const override { return ""; }
+            constexpr std::string packet_name() const override { return "player_loaded"; }
+
+        };
+
+        //Sent when input is presed and again when released
+        // IF all keys are release {} is received
+        class player_input : public packet
+        {
+        public:
+            template<util::IteratorU8 Iter>
+            player_input(Iter& data)
+                : packet(play_packet_id::player_input),
+                m_input_bitset(*data)
+            {
+                ++data;
+            }
+
+            virtual ~player_input() = default;
+
+            constexpr std::string as_string() const override
+            {
+
+                auto input_or_empty = [bitset = m_input_bitset] (const input i, std::string_view str) constexpr -> std::string_view
+                {
+                    return (std::to_underlying(i) & bitset) ? str : "";
+                };
+
+                return std::string{}
+                    .append(input_or_empty(input::forward, "forward, "))
+                    .append(input_or_empty(input::backward, "backward, "))
+                    .append(input_or_empty(input::left, "left, "))
+                    .append(input_or_empty(input::right, "right, "))
+                    .append(input_or_empty(input::sneak, "sneak, "))
+                    .append(input_or_empty(input::jump, "jump, "))
+                    .append(input_or_empty(input::sprint, "sprint, "));
+            }
+
+            constexpr std::string packet_name() const override { return "player_input"; }
+
+        private:
+            std::uint8_t m_input_bitset;
+        };
+
         template<util::IteratorU8 Iter>
         packet_ptr parse_play_packet(Iter& iter)
         {
@@ -292,6 +344,10 @@ namespace mc
 
             switch(id)
             {
+                case mc::client::play_packet_id::player_input:
+                    return std::make_unique<player_input>(iter);
+                case play_packet_id::player_loaded:
+                    return std::make_unique<player_loaded>();
                 default:
                     return nullptr;
             }

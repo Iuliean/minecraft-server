@@ -5,6 +5,7 @@
 #include <nlohmann/json.hpp>
 #include <SFW/Connection.h>
 
+#include "data_types/position.hpp"
 #include "packet.hpp"
 #include "client_packets.hpp"
 #include "packet_dispatcher.hpp"
@@ -20,7 +21,7 @@ namespace mc
     public:
         player_handler() = delete;
         player_handler(const player_handler&) = delete;
-        player_handler(player_handler&&) = delete;
+        player_handler(player_handler&&) = default;
 
         player_handler& operator=(const player_handler&) = delete;
         player_handler& operator=(player_handler&&) = delete;
@@ -47,15 +48,23 @@ namespace mc
         * CALLBACKS *
         *************/
 
-        coro::task<void> on_login_start(client::login_start_packet& start_packet);
         coro::task<void> on_login_ack(client::login_ack& ack_packet);
 
         coro::task<void> on_known_packs(client::known_packs_packet& known_packs);
         coro::task<void> on_ack_config_end(client::ack_config& conifg_ack);
 
+        /*******
+        * PLAY *
+        *******/
+
+        coro::task<void> on_player_loaded(client::player_loaded& packet);
+        coro::task<void> on_player_input(client::player_input& input);
+
         iu::Connection& m_client;
         server_state& m_state;
         const ServerContext& m_context;
+
+        position m_position;
     };
 }
 #endif //PLAYER_HANDLER_H

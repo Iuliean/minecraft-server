@@ -8,6 +8,7 @@ add_executable(${SERVER}
     src/utils.cpp
     src/data_types/identifier.cpp
     src/data_types/nbt.cpp
+    src/instance.cpp
 
     include/block_state.hpp
     include/client_packets.hpp
@@ -21,12 +22,14 @@ add_executable(${SERVER}
     include/server_packets.hpp
     include/server_state.hpp
     include/utils.hpp
+    include/instance.hpp
 
     include/data_types/bitset.hpp
     include/data_types/identifier.hpp
     include/data_types/nbt.hpp
     include/data_types/position.hpp
     include/data_types/uuid.hpp
+    include/data_types/movement.hpp
 )
 
 target_include_directories(${SERVER}

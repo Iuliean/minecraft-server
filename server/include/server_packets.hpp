@@ -46,7 +46,8 @@ namespace mc::server
         unknown   = -1,
         game_event = 0x22,
         login_play = 0x2b,
-        sync_player_pos = 0x41
+        sync_player_pos = 0x41,
+        player_info_update = 0x44
     };
 
     // ****************
@@ -419,6 +420,7 @@ namespace mc::server
 
         int m_relative_mask;
     };
+
 
 } // namespace mc::server
 

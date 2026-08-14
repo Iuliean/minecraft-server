@@ -19,6 +19,7 @@
 #include "data_types/nbt.hpp"
 #include "packet.hpp"
 #include "server_state.hpp"
+#include "instance.hpp"
 #include "coro/coro.hpp"
 #include "zstr.hpp"
 
@@ -65,10 +66,11 @@ namespace mc
         }
     }
 
+    static instance s_instance;
+
     minecraft_handler::minecraft_handler()
         : ServerConnectionHandler(),
           m_state(),
-          m_player_handler(),
           m_client(),
           m_stop(false)
     {
@@ -110,7 +112,7 @@ namespace mc
                         dispatch(std::move(packet));
                     else
                     {
-                        SFW_LOG_DEBUG("minecraft_handker", "Discarding packet");
+                        //SFW_LOG_DEBUG("minecraft_handker", "Discarding packet");
                         break;
                     }
                 }
@@ -142,7 +144,13 @@ namespace mc
             client::status_packet_id::ping,
             bind_callback(&minecraft_handler::on_ping)
         );
+
+        register_callback(
+            client::login_packet_id::start,
+            bind_callback(&minecraft_handler::on_login_start)
+        );
     }
+
     void minecraft_handler::dispatch(packet_ptr packet)
     {
         auto dispatch_with_error = [] <typename T> (packet_ptr packet, const map_type<T>& callback_map)
@@ -237,12 +245,6 @@ namespace mc
             {
                 SFW_LOG_INFO("minecraft_handler", "Login request");
                 m_state.set_state(state::login);
-                m_player_handler.emplace(
-                    *m_client,
-                    m_context,
-                    dynamic_cast<packet_dispatcher&>(*this),
-                    m_state
-                );
                 break;
             }
             case status:
@@ -276,6 +278,25 @@ namespace mc
         *(send.data() + 1) = ping.get_payload();
         util::writeVarInt(send, 0, send.size());
         m_client->Send(send);
+        co_return;
+    }
+
+    coro::task<void> minecraft_handler::on_login_start(client::login_start_packet& start_packet)
+    {
+        SFW_LOG_DEBUG("minecraft_handler", "{}", start_packet);
+
+        s_instance.register_player(
+            start_packet.get_uuid(),
+            *m_client,
+            m_context,
+            *this,
+            m_state
+        );
+
+        m_client->Send(
+            server::login_success_packet{start_packet}
+        );
+
         co_return;
     }
 }

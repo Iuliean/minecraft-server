@@ -9,12 +9,14 @@
 #include <algorithm>
 #include <vector>
 
+#include "SFW/Serializer.h"
 #include "block_state.hpp"
 #include "client_packets.hpp"
 #include "player_handler.hpp"
 #include "data_types/bitset.hpp"
 #include "data_types/identifier.hpp"
 #include "data_types/nbt.hpp"
+#include "data_types/uuid.hpp"
 #include "packet_dispatcher.hpp"
 #include "registry.hpp"
 #include "server_context.hpp"
@@ -28,7 +30,8 @@ namespace mc
     player_handler::player_handler(iu::Connection& client, const ServerContext& context, packet_dispatcher& dispatcher, server_state& state)
         : m_client(client),
         m_state(state),
-        m_context(context)
+        m_context(context),
+        m_position(0, 0, 0)
     {
         register_callbacks(dispatcher);
     }
@@ -41,10 +44,6 @@ namespace mc
     void player_handler::register_callbacks(packet_dispatcher& dispatcher)
     {
         /* LOGIN */
-        dispatcher.register_callback(
-            client::login_packet_id::start,
-            bind_callback(&player_handler::on_login_start)
-        );
         dispatcher.register_callback(
             client::login_packet_id::login_ack,
             bind_callback(&player_handler::on_login_ack)
@@ -59,6 +58,17 @@ namespace mc
             client::config_packet_id::ack_config_end,
             bind_callback(&player_handler::on_ack_config_end)
         );
+
+        /* PLAY */
+
+        dispatcher.register_callback(
+            client::play_packet_id::player_loaded,
+            bind_callback(&player_handler::on_player_loaded)
+        );
+        dispatcher.register_callback(
+            client::play_packet_id::player_input,
+            bind_callback(&player_handler::on_player_input)
+        );
     }
 
     /************
@@ -68,20 +78,6 @@ namespace mc
     /********
     * LOGIN *
     *********/
-
-    coro::task<void> player_handler::on_login_start(client::login_start_packet& start_packet)
-    {
-        server::login_success_packet success_packet{start_packet};
-        static std::atomic_bool received(false);
-        if (!received)
-        {
-            received = true;
-            m_client.Send(success_packet);
-            SFW_LOG_DEBUG("player_handler", "Success packet sent");
-        }
-
-        co_return;
-    }
 
     coro::task<void> player_handler::on_login_ack([[maybe_unused]]client::login_ack& ack_packet)
     {
@@ -98,7 +94,7 @@ namespace mc
         SFW_LOG_INFO("player_handler", "Sending registry data ... DONE");
         m_client.Send(server::finish_config{});
         co_return;
-}
+    }
 
 /************
 * CONFIGURE *
@@ -226,14 +222,48 @@ namespace mc
                 m_client.Send(chunk_data);
                 SFW_LOG_INFO("PlayerHandler", "Chunk Data Sent {} {}", i, j);
         }
-        for (;;)
+
+        std::vector<uint8_t> player_info;
+        util::writeVarInt(player_info, 0x3f);
+
+        iu::Serializer<uint8_t>{}.Serialize(player_info, 1);
+
+        std::array<std::uint8_t, 16> uid = {238, 224, 133, 171, 72, 23, 77, 73, 179, 43, 166, 101, 155, 73, 137, 115};
+        auto it = uid.begin();
+        util::writeVarInt(player_info, 1);
+        
+        iu::Serializer<mc::uuid>{}.Serialize(player_info, mc::uuid{it});
+        util::writeStringToBuff(player_info, "NewPlayer");
+        util::writeVarInt(player_info, 0);
+        util::writeVarInt(player_info, 0, player_info.size());
+
+        //for (;;)
         {
             SFW_LOG_INFO("PlayerHandler", "Sent sync packet");
             m_client.Send(server::sync_player_position(0, 30, 320, 30, 0, 0, 0, 0, 0, 0));
+            m_client.Send(player_info);
             std::this_thread::sleep_for(std::chrono::seconds(10));
         }
 
         co_return;
     }
+
+    /*******
+    * PLAY *
+    ********/
+
+    coro::task<void> player_handler::on_player_loaded(client::player_loaded& packet)
+    {
+        SFW_LOG_DEBUG("PlayerHandler", "{}", packet);
+        co_return;
+    }
+
+    coro::task<void> player_handler::on_player_input(client::player_input& input)
+    {
+        SFW_LOG_DEBUG("PlayerHandler", "{}", input);
+        co_return;
+    }
+
+
 
 }

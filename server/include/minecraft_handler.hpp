@@ -67,12 +67,19 @@ namespace mc
             return [this, method](T& packet) { return std::invoke(method, this, packet); };
         }
 
+        /*******
+        * IDLE *
+        *******/
         coro::task<void> on_handshake(client::handshake_packet& handshake);
         coro::task<void> on_status(client::status_request_packet& status);
         coro::task<void> on_ping(client::ping_request& ping);
 
+        /********
+        * LOGIN *
+        ********/
+        coro::task<void> on_login_start(client::login_start_packet& start_packet);
+
         server_state m_state;
-        std::optional<player_handler> m_player_handler;
         ServerContext m_context;
         std::optional<iu::Connection> m_client;
         std::atomic_bool m_stop;
